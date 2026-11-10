@@ -6,7 +6,7 @@ const ctxFor = (browser, email) => browser.newContext({ extraHTTPHeaders: { 'X-D
 test('the landing page is open to anyone and offers two ways in: sign up, or try a worked example with no sign-up', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 2, name: 'Find the engagements that fit' })).toBeVisible();
-  await expect(page.locator('#go')).toHaveAttribute('href', '/auth/email?next=%2Fstart%2F');
+  await expect(page.locator('#go')).toHaveAttribute('href', '/login?next=%2Fstart%2F');
   await expect(page.getByRole('heading', { level: 2, name: 'Try a worked example first' })).toBeVisible();
   const tries = page.locator('#trylist a.trybtn');
   await expect(tries).toHaveCount(4);
@@ -101,5 +101,39 @@ test('try first opens the worked example as the demo account, without inviting a
   expect(res.headers()['set-cookie']).toMatch(/^tri_demo=[^;]+; Path=\/; HttpOnly/);
   const no = await ctx.request.get('/auth/try?from=start&app=somethingElse', { maxRedirects: 0 });
   expect(no.headers()['location']).toBe('/start/?try=unknown');
+  await ctx.close();
+});
+
+test('the sign-in page offers the ways set up on the site, each straight to its provider', async ({ page, request }) => {
+  await page.goto('/login?next=%2Fstart%2F');
+  const b = page.locator('#methods a');
+  await expect(b).toHaveCount(3);
+  await expect(b.nth(0)).toHaveText('Continue with Google');
+  await expect(b.nth(0)).toHaveAttribute('href', '/auth/google?next=%2Fstart%2F');
+  await expect(b.nth(1)).toHaveText('Continue with a work account (Microsoft)');
+  await expect(b.nth(2)).toHaveText('Email me a one-time code');
+  // Access proves the email on each path (simulated here); Start then starts the same session as for email.
+  const g = await request.get('/auth/google?next=%2Fstart%2F', { maxRedirects: 0 });
+  expect(g.status()).toBe(303);
+  expect(g.headers()['location']).toBe('/start/');
+  expect(g.headers()['set-cookie']).toMatch(/^tri_session=/);
+  expect((await request.get('/auth/github', { maxRedirects: 0 })).status()).toBe(404); // not set up on this site
+});
+
+test('marketing email is opt-in: unticked to start, saved when ticked, and the person can untick it', async ({ browser }) => {
+  const ctx = await ctxFor(browser, 'dee@marketing.example'); const p = await ctx.newPage();
+  await p.goto('/start/');
+  const box = p.locator('#mkt');
+  await expect(box).not.toBeChecked();
+  await expect(p.locator('#marketing')).toContainText('Send me news, guidance and event invitations from Triodian by email');
+  await box.check();
+  await expect(p.locator('#mkt-note')).toContainText('You opted in on');
+  const admin = await (await ctxFor(browser, 'damian.hickey@triodian.com')).request.get('/api/admin/marketing?format=csv');
+  expect(admin.headers()['content-type']).toMatch(/text\/csv/);
+  expect(await admin.text()).toContain('dee@marketing.example');
+  await p.reload();
+  await expect(p.locator('#mkt')).toBeChecked();
+  await p.locator('#mkt').uncheck();
+  await expect(p.locator('#mkt-note')).toContainText('not on Triodian’s mailing list');
   await ctx.close();
 });

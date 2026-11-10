@@ -5,6 +5,7 @@ import { memoryStore } from '../lib/store/d1.js';
 import { stubFetch, table } from './atlas/stub.mjs';
 import { demoTokenFor, tryFirst, tryFirstOn } from '../lib/identity/try-first.js';
 import { sessionEmail } from '../lib/identity/session.js';
+import { methodsOn, asEmailSignIn } from '../lib/identity/methods.js';
 
 let fails = 0; const ok = (label, cond, extra) => { if (!cond) fails++; console.log((cond ? 'PASS' : 'FAIL') + ' · ' + label + (extra ? ' → ' + extra : '')); };
 const store = memoryStore(), atlas = atlasClient(stubFetch, 'https://obligations-atlas.triodian.com');
@@ -53,6 +54,34 @@ ok('a name over 120 characters is refused', r.status === 400);
 const down = atlasClient(async () => { throw new Error('down'); }, 'https://atlas.invalid');
 r = await handle({ method: 'GET', path: '/api/table', email: 'ana@coastline.example' }, store, down);
 ok('when the Atlas is down the answer says so', r.status === 502 && r.body.code === 'atlas');
+
+// Marketing email: opt-in only, recorded with its wording and date, and withdrawable (task 5.1)
+r = await call('GET', '/api/me', 'ana@coastline.example');
+ok('nobody is opted in by signing up', r.body.prospect.marketing === null && /stop them at any time/.test(r.body.marketingWording));
+r = await call('PUT', '/api/marketing', 'ana@coastline.example', { body: { consent: 'yes' } });
+ok('the choice is a yes or a no', r.status === 400);
+r = await call('PUT', '/api/marketing', 'ana@coastline.example', { body: { consent: true } });
+ok('opting in keeps what was agreed to and when', r.status === 200 && r.body.prospect.marketing.consent === true && r.body.prospect.marketing.wording.startsWith('Send me news') && !!r.body.prospect.marketing.version);
+await call('GET', '/api/me', '=cmd@evil.example');
+await call('PUT', '/api/marketing', '=cmd@evil.example', { body: { consent: true } });
+r = await call('GET', '/api/admin/marketing', 'damian.hickey@triodian.com');
+ok('the administrator sees who opted in', r.status === 200 && r.body.people.map(p => p.email).sort().join() === '=cmd@evil.example,ana@coastline.example');
+r = await call('GET', '/api/admin/marketing', 'damian.hickey@triodian.com', { query: { format: 'csv' } });
+ok('as a CSV for the mailing tool, with formula-like cells made harmless', r.csv.startsWith('email,name,organisation,consented_at,wording_version\n') && r.csv.includes("'=cmd@evil.example") && r.csv.includes('ana@coastline.example'), r.csv);
+r = await call('GET', '/api/admin/marketing', 'ana@coastline.example');
+ok('a prospect cannot see the marketing list', r.status === 403);
+r = await call('PUT', '/api/marketing', 'ana@coastline.example', { body: { consent: false } });
+ok('opting out records the withdrawal of the earlier consent', r.body.prospect.marketing.consent === false && !!r.body.prospect.marketing.withdrawnFrom);
+r = await call('GET', '/api/admin/marketing', 'damian.hickey@triodian.com');
+ok('and takes the person off the list', !r.body.people.some(p => p.email === 'ana@coastline.example'));
+ok('both choices are in the audit log', store._audit.some(x => x.action === 'marketing.optIn') && store._audit.some(x => x.action === 'marketing.optOut'));
+
+// Ways to sign in (task 5.1)
+ok('email alone when none are listed', methodsOn({}).map(m => m.id).join() === 'email');
+ok('the listed methods, in button order', methodsOn({ SIGN_IN_METHODS: 'email, Apple,google,microsoft,github,myspace' }).map(m => m.id).join() === 'google,microsoft,github,apple,email');
+const via = asEmailSignIn(new Request('https://start.triodian.com/auth/google?next=%2Fstart%2F', { headers: { 'Cf-Access-Jwt-Assertion': 'x.y.z' } }), { SIGN_IN_METHODS: 'google,email' });
+ok('a provider path is handed to the email sign-in, keeping the Access token and next', via && new URL(via.url).pathname === '/auth/email' && new URL(via.url).searchParams.get('next') === '/start/' && via.headers.get('Cf-Access-Jwt-Assertion') === 'x.y.z');
+ok('a method not set up on the site is not', asEmailSignIn(new Request('https://start.triodian.com/auth/github'), { SIGN_IN_METHODS: 'google,email' }) === null);
 
 // Try first (task 5.8)
 const env = { SUITE_DEMO: 'on', DEMO_SESSION_KEY: 'k'.repeat(32) };

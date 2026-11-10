@@ -10,6 +10,7 @@ import { d1Store } from '../lib/store/d1.js';
 import { handle, atlasClient } from '../lib/core/api.js';
 import { ATLAS_URL, BOOTSTRAP_ADMINS } from '../lib/config.js';
 import { tryFirst, tryFirstOn } from '../lib/identity/try-first.js';
+import { methodsOn, asEmailSignIn } from '../lib/identity/methods.js';
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
@@ -31,8 +32,11 @@ const OPEN_PAGES = new Set(['/', '/index.html']);
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const auth = await handleAuth(request, env);
+    // Google, a work account, GitHub or Apple: Access has proven the email on that path; start the session as for email.
+    const viaProvider = asEmailSignIn(request, env);
+    const auth = await handleAuth(viaProvider || request, env);
     if (auth) return auth;
+    if (url.pathname === '/auth/methods') return json({ methods: methodsOn(env).map(m => ({ id: m.id, path: m.path, label: m.label })) });
     // Try first (task 5.8): open an app's worked example as the shared demo account, with or without signing up.
     if (url.pathname === '/auth/try') return tryFirst(request, env);
     if (url.pathname === '/auth/try-status') return json({ on: tryFirstOn(env) });
@@ -51,6 +55,7 @@ export default {
     }
     try {
       const r = await handle({ method: request.method, path: url.pathname, email: who.email, query: Object.fromEntries(url.searchParams), body, admins: admins(env), tryFirst: tryFirstOn(env) }, d1Store(env.DB), atlas(env));
+      if (r.csv != null) return new Response(r.csv, { status: 200, headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="triodian-start-marketing.csv"', 'Cache-Control': 'no-store' } });
       return json(r.body, r.status);
     } catch (e) {
       console.error(e);
