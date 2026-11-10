@@ -6,7 +6,7 @@ const ctxFor = (browser, email) => browser.newContext({ extraHTTPHeaders: { 'X-D
 test('the landing page is open to anyone and offers two ways in: sign up, or try a worked example with no sign-up', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 2, name: 'Find the engagements that fit' })).toBeVisible();
-  await expect(page.locator('#go')).toHaveAttribute('href', '/login?next=%2Fstart%2F');
+  await expect(page.locator('#methods a').first()).toHaveAttribute('href', /^\/auth\/[a-z]+\?next=%2Fstart%2F$/);
   await expect(page.getByRole('heading', { level: 2, name: 'Try a worked example first' })).toBeVisible();
   const tries = page.locator('#trylist a.trybtn');
   await expect(tries).toHaveCount(4);
@@ -104,14 +104,19 @@ test('try first opens the worked example as the demo account, without inviting a
   await ctx.close();
 });
 
-test('the sign-in page offers the ways set up on the site, each straight to its provider', async ({ page, request }) => {
-  await page.goto('/login?next=%2Fstart%2F');
+test('the home page offers the ways to sign in set up on the site, each straight to its provider', async ({ page, request }) => {
+  await page.goto('/');
   const b = page.locator('#methods a');
   await expect(b).toHaveCount(3);
   await expect(b.nth(0)).toHaveText('Continue with Google');
   await expect(b.nth(0)).toHaveAttribute('href', '/auth/google?next=%2Fstart%2F');
   await expect(b.nth(1)).toHaveText('Continue with a work account (Microsoft)');
   await expect(b.nth(2)).toHaveText('Email me a one-time code');
+  // The shared sign-in code sends people to /login; Start sends them home with the same message and destination.
+  const l = await request.get('/login?out=1', { maxRedirects: 0 });
+  expect(l.status()).toBe(303); expect(l.headers()['location']).toBe('/?out=1');
+  await page.goto('/login?out=1');
+  await expect(page.locator('#m-out')).toBeVisible();
   // Access proves the email on each path (simulated here); Start then starts the same session as for email.
   const g = await request.get('/auth/google?next=%2Fstart%2F', { maxRedirects: 0 });
   expect(g.status()).toBe(303);

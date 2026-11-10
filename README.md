@@ -28,7 +28,7 @@ and terms, privacy and pricing (5.9).
 | API, cloud-neutral | `lib/core/api.js` |
 | Prospects | `lib/store/d1.js` (Cloudflare D1) |
 | Sign-in and sessions | `lib/identity/session.js` and `cloudflare-access.js`, the same files as the engagement apps |
-| Pages | `public/index.html` (open), `public/login/`, `public/start/` (needs a session) |
+| Pages | `public/index.html` (open: sign-in and Try first), `public/start/` (needs a session); `/login` sends people to the home page |
 
 ## Run the tests
 

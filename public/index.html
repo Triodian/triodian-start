@@ -22,8 +22,11 @@
       <p class="choice-no"><span class="stepno">1</span> Recommended</p>
       <h2 id="c1">Find the engagements that fit</h2>
       <p>Answer five short questions: who you are, where the organisation is, what kind it is, its size and what prompted you. You see which Triodian engagements fit, in the order the work is done, what each needs, and a matter brief scoped to you.</p>
-      <p><a class="btn primary big" id="go" href="/login?next=%2Fstart%2F">Sign up or sign in</a></p>
-      <p class="small soft">You choose how to sign in on the next page, such as Google, a work account or a code emailed to you. There is no password. Signing up opens nothing in any client's apps: an engagement is set up only once you and Triodian agree to go ahead.</p>
+      <h3 class="signin-h">Sign up or sign in</h3>
+      <div class="methods" id="methods"><a class="btn primary big" href="/auth/email?next=%2Fstart%2F" data-method="email">Email me a one-time code</a></div>
+      <p class="msg-bad" id="m-email" role="alert" hidden>Sign-in didn’t complete. Try again.</p>
+      <p class="msg-ok" id="m-out" role="status" hidden>You’re signed out.</p>
+      <p class="small soft">There is no password. We only learn your email address. Signing up opens nothing in any client's apps: an engagement is set up only once you and Triodian agree to go ahead.</p>
     </section>
     <section class="choice" aria-labelledby="c2">
       <p class="choice-no"><span class="stepno">2</span> No sign-up</p>
