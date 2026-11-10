@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign in · Triodian Start</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/triodian-mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/login/login.css">
+</head>
+<body>
+<main class="si">
+  <div class="si-top"><img src="/triodian-logo.svg" alt="Triodian"><span class="vrule" aria-hidden="true"></span><span class="si-app" id="app-name">Triodian Start</span></div>
+  <h1>Sign up or sign in</h1>
+  <p class="lead">Use your work email. We send you a one-time code; there is no password.</p>
+  <p class="msg bad" id="m-email" role="alert" hidden>Email sign-in didn’t complete. Try again.</p>
+  <p class="msg ok" id="m-out" role="status" hidden>You’re signed out.</p>
+  <a class="btn primary" id="email-link" href="/auth/email">Continue with your email</a>
+  <p class="hint">Signing up opens nothing in any client's apps.</p>
+</main>
+<script src="/login/login.js"></script>
+</body>
+</html>

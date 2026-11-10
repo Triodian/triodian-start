@@ -1,0 +1,11 @@
+{
+  "name": "triodian-start-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Browser and API tests against the app running locally (wrangler dev, local D1) with a stand-in Atlas. Separate from the app so Cloudflare builds are unaffected.",
+  "scripts": { "test": "playwright test" },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "wrangler": "^4.40.0"
+  }
+}

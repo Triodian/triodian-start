@@ -1,0 +1,6 @@
+{
+  "name": "triodian-start",
+  "private": true,
+  "type": "module",
+  "description": "Triodian Start: the front door to the Triodian AI governance apps (Cloudflare Worker)."
+}
