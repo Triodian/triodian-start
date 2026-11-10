@@ -3,10 +3,25 @@ import { test, expect } from '@playwright/test';
 
 const ctxFor = (browser, email) => browser.newContext({ extraHTTPHeaders: { 'X-Dev-User': email } });
 
-test('the landing page is open to anyone and offers sign-up by email', async ({ page }) => {
+test('the landing page is open to anyone and offers two ways in: sign up, or try a worked example with no sign-up', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Find the engagements that fit your organisation');
+  await expect(page.getByRole('heading', { level: 2, name: 'Find the engagements that fit' })).toBeVisible();
   await expect(page.locator('#go')).toHaveAttribute('href', '/auth/email?next=%2Fstart%2F');
+  await expect(page.getByRole('heading', { level: 2, name: 'Try a worked example first' })).toBeVisible();
+  const tries = page.locator('#trylist a.trybtn');
+  await expect(tries).toHaveCount(4);
+  await expect(tries.first()).toHaveAttribute('href', '/auth/try?app=aiBoardDirection');
+  await expect(page.locator('#tryoff')).toBeHidden();
+});
+
+test('a visitor who has not signed up can open a worked example', async ({ playwright }) => {
+  const anon = await playwright.request.newContext({ baseURL: 'http://localhost:8790' }); // no X-Dev-User: the landing page's own request
+  const res = await anon.get('/auth/try?app=aiRiskAppetite', { maxRedirects: 0 });
+  expect(res.status()).toBe(303);
+  expect(res.headers()['location']).toBe('http://localhost:8898/apps/risk-appetite/');
+  expect(res.headers()['set-cookie']).toMatch(/^tri_demo=/);
+  expect((await (await anon.get('/auth/try-status')).json()).on).toBe(true);
+  await anon.dispose();
 });
 
 test('each answer changes what is shown next, and the solution set follows the Atlas routing table', async ({ browser }) => {
@@ -41,6 +56,8 @@ test('each answer changes what is shown next, and the solution set follows the A
   await expect(p.locator('.eng a', { hasText: 'Try the worked example' })).toHaveCount(3);
   // Save, then the answers are there on a fresh visit.
   await p.fill('#f-name', 'Ana Cruz'); await p.fill('#f-org', 'Coastline Super');
+  await expect(p.locator('aside.facts')).toContainText('Superannuation');
+  await expect(p.locator('aside.facts')).toContainText('Financially regulated');
   await p.click('#save');
   await expect(p.locator('#saved')).toHaveText('Saved.');
   await p.reload();
@@ -82,7 +99,7 @@ test('try first opens the worked example as the demo account, without inviting a
   expect(res.status()).toBe(303);
   expect(res.headers()['location']).toBe('http://localhost:8898/apps/use-assessment/');
   expect(res.headers()['set-cookie']).toMatch(/^tri_demo=[^;]+; Path=\/; HttpOnly/);
-  const no = await ctx.request.get('/auth/try?app=somethingElse', { maxRedirects: 0 });
-  expect(no.headers()['location']).toMatch(/try=unknown/);
+  const no = await ctx.request.get('/auth/try?from=start&app=somethingElse', { maxRedirects: 0 });
+  expect(no.headers()['location']).toBe('/start/?try=unknown');
   await ctx.close();
 });

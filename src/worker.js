@@ -33,8 +33,9 @@ export default {
     const url = new URL(request.url);
     const auth = await handleAuth(request, env);
     if (auth) return auth;
-    // Try first (task 5.8): open an app's worked example as the shared demo account.
-    if (url.pathname === '/auth/try') return tryFirst(request, env, (await whoIs(request, env)).email);
+    // Try first (task 5.8): open an app's worked example as the shared demo account, with or without signing up.
+    if (url.pathname === '/auth/try') return tryFirst(request, env);
+    if (url.pathname === '/auth/try-status') return json({ on: tryFirstOn(env) });
     if (!url.pathname.startsWith('/api/')) {
       if (!OPEN_PAGES.has(url.pathname)) { const g = await gate(request, env); if (g) return g; }
       return markDemo(await env.ASSETS.fetch(request), env);

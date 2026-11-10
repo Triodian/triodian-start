@@ -57,7 +57,7 @@ ok('when the Atlas is down the answer says so', r.status === 502 && r.body.code 
 // Try first (task 5.8)
 const env = { SUITE_DEMO: 'on', DEMO_SESSION_KEY: 'k'.repeat(32) };
 ok('try first is on only on a demo site with the demo key', tryFirstOn(env) && !tryFirstOn({ SUITE_DEMO: 'off', DEMO_SESSION_KEY: 'k' }) && !tryFirstOn({ SUITE_DEMO: 'on' }));
-let res = await tryFirst(new Request('https://start.triodian.com/auth/try?app=aiRiskAppetite'), env, 'ana@coastline.example');
+let res = await tryFirst(new Request('https://start.triodian.com/auth/try?app=aiRiskAppetite'), env);
 const cookie = res.headers.get('set-cookie') || '';
 ok('it opens the app with the demo account cookie for triodian.com', res.status === 303 && res.headers.get('location') === 'https://risk-appetite.triodian.com/?suite=1' && /^tri_demo=/.test(cookie) && /Domain=triodian\.com/.test(cookie) && /HttpOnly/.test(cookie), cookie);
 const body = JSON.parse(atob(cookie.split('=')[1].split('.')[0].replace(/-/g, '+').replace(/_/g, '/')));
@@ -68,10 +68,10 @@ const asApp = c => sessionEmail(new Request('https://risk-appetite.triodian.com/
 ok('an app signs the visitor in as the demo account with that cookie', (await asApp(cookie)) === 'demo@triodian.com');
 ok('a cookie signed with another key is refused', (await asApp('tri_demo=' + await demoTokenFor('other-key', 'demo@triodian.com', Math.floor(Date.now() / 1000) + 60))) === null);
 ok('a cookie for anyone but the demo account is refused', (await asApp('tri_demo=' + await demoTokenFor(env.DEMO_SESSION_KEY, 'ana@coastline.example', Math.floor(Date.now() / 1000) + 60))) === null);
-res = await tryFirst(new Request('https://start-test.triodian.com/auth/try?app=aiBoardDirection'), { ...env, APP_HOST_SUFFIX: '-test' }, 'ana@coastline.example');
+res = await tryFirst(new Request('https://start-test.triodian.com/auth/try?app=aiBoardDirection'), { ...env, APP_HOST_SUFFIX: '-test' });
 ok('on the test site it opens the test app', res.headers.get('location') === 'https://board-direction-test.triodian.com/?suite=1');
-res = await tryFirst(new Request('https://start.triodian.com/auth/try?app=aiRiskAppetite'), env, null);
-ok('without signing up it goes to sign-in first', /\/login/.test(res.headers.get('location')) && !res.headers.get('set-cookie'));
-res = await tryFirst(new Request('https://start.triodian.com/auth/try?app=x'), env, 'ana@coastline.example');
-ok('an unknown app opens nothing', /try=unknown/.test(res.headers.get('location')) && !res.headers.get('set-cookie'));
+res = await tryFirst(new Request('https://start.triodian.com/auth/try?app=aiRiskAppetite'), { SUITE_DEMO: 'on' });
+ok('without the demo key it goes back to the landing page and says so', res.headers.get('location') === '/?try=off' && !res.headers.get('set-cookie'));
+res = await tryFirst(new Request('https://start.triodian.com/auth/try?from=start&app=x'), env);
+ok('an unknown app opens nothing, and goes back to the page it came from', res.headers.get('location') === '/start/?try=unknown' && !res.headers.get('set-cookie'));
 console.log(fails ? `\n${fails} failed` : '\nall passed'); process.exit(fails ? 1 : 0);

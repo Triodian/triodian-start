@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Triodian Start</title>
-<meta name="description" content="Find the Triodian AI governance engagements that fit your organisation, and try their worked examples.">
+<meta name="description" content="Find the Triodian AI governance engagements that fit your organisation, or try their worked examples first.">
 <link rel="icon" href="/triodian-mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/app.css">
 <link rel="stylesheet" href="/start.css">
@@ -14,21 +14,30 @@
 <main class="wrap">
   <section class="hero">
     <p class="eyebrow">AI governance for boards, counsel and risk</p>
-    <h1>Find the engagements that fit your organisation</h1>
-    <p class="lede">Say who you are, what kind of organisation you are in and where, and what prompted you. You'll see which Triodian engagements fit, in the order the work is done, what each needs, and a matter brief scoped to you.</p>
-    <p><a class="btn primary" id="go" href="/auth/email?next=%2Fstart%2F">Sign up or sign in with your email</a></p>
-    <p class="small soft">We send a one-time code to your email. Signing up opens nothing in any client's apps: an engagement is set up only once you and Triodian agree to go ahead.</p>
+    <h1>Start here</h1>
+    <p class="lede">Two ways in. Find the engagements that fit your organisation, or look at the work first in a worked example.</p>
   </section>
-  <section>
-    <h2 class="sh">Try first</h2>
-    <p class="small soft">Each app opens on a worked example with fictional companies, so you can see the work before forming a team. Sign up, then choose <em>Try the worked example</em> beside any engagement.</p>
-    <div class="tryrow">
-      <div class="card"><strong>AI Board Direction</strong><p class="small soft">The board's directions on AI: where to use it and what to rule out.</p></div>
-      <div class="card"><strong>AI Risk Appetite</strong><p class="small soft">How much authority the board allows AI to hold, and the triggers that act on it.</p></div>
-      <div class="card"><strong>AI Use Assessment</strong><p class="small soft">Whether each AI use, including in the supply chain, fits the appetite.</p></div>
-      <div class="card"><strong>AI Confidentiality Exposure Assessment</strong><p class="small soft">Where matter information can reach an external AI model.</p></div>
-    </div>
-  </section>
+  <div class="choices">
+    <section class="choice primary-choice" aria-labelledby="c1">
+      <p class="choice-no"><span class="stepno">1</span> Recommended</p>
+      <h2 id="c1">Find the engagements that fit</h2>
+      <p>Answer five short questions: who you are, where the organisation is, what kind it is, its size and what prompted you. You see which Triodian engagements fit, in the order the work is done, what each needs, and a matter brief scoped to you.</p>
+      <p><a class="btn primary big" id="go" href="/auth/email?next=%2Fstart%2F">Sign up or sign in with your email</a></p>
+      <p class="small soft">We email you a one-time code; there is no password. Signing up opens nothing in any client's apps: an engagement is set up only once you and Triodian agree to go ahead.</p>
+    </section>
+    <section class="choice" aria-labelledby="c2">
+      <p class="choice-no"><span class="stepno">2</span> No sign-up</p>
+      <h2 id="c2">Try a worked example first</h2>
+      <p>Each app opens on a worked example with fictional companies. Nothing you do there is saved.</p>
+      <div class="trylist" id="trylist">
+        <a class="btn trybtn" href="/auth/try?app=aiBoardDirection"><strong>AI Board Direction</strong><span>The board's directions on AI: where to use it and what to rule out</span></a>
+        <a class="btn trybtn" href="/auth/try?app=aiRiskAppetite"><strong>AI Risk Appetite</strong><span>How much authority AI may hold, and the triggers that act on it</span></a>
+        <a class="btn trybtn" href="/auth/try?app=aiUseAssessment"><strong>AI Use Assessment</strong><span>Whether each AI use, including in the supply chain, fits the appetite</span></a>
+        <a class="btn trybtn" href="/auth/try?app=aiConfidentialityExposureAssessment"><strong>AI Confidentiality Exposure Assessment</strong><span>Where matter information can reach an external AI model</span></a>
+      </div>
+      <p class="notice" id="tryoff" hidden>Worked examples open from the demo site only.</p>
+    </section>
+  </div>
 </main>
 <script src="/landing.js"></script>
 </body>
