@@ -28,7 +28,7 @@
       "preview_urls": false,
       "routes": [{ "pattern": "start-test.triodian.com", "custom_domain": true }],
       "d1_databases": [{ "binding": "DB", "database_name": "triodian-start-test-db", "database_id": "a172ec69-0e0c-47e9-be26-1729a47ca11d" }],
-      "vars": { "SUITE_DEMO": "on", "APP_HOST_SUFFIX": "-test", "SITE_LABEL": "Test site", "SITE_URL": "https://start-test.triodian.com", "ATLAS_URL": "https://obligations-atlas-test.triodian.com", "ADMINS": "", "SIGN_IN_METHODS": "email" },
+      "vars": { "SUITE_DEMO": "on", "APP_HOST_SUFFIX": "-test", "SITE_LABEL": "Test site", "SITE_URL": "https://start-test.triodian.com", "ATLAS_URL": "https://obligations-atlas-test.triodian.com", "ADMINS": "", "SIGN_IN_METHODS": "google,email" },
       "observability": { "enabled": true }
     }
   }
