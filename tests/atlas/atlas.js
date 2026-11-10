@@ -1,0 +1,675 @@
+import { REGULATED_SECTORS } from './sectors.js';
+import { routeFor, FINANCIALLY_REGULATED_TYPES, ROUTING_TABLE } from './solution-set.js';
+/**
+ * Atlas core: queries over a governed-record snapshot from the Reasoning Fabric
+ * connector. Plain ES module whose only import is the generated sectors.js, shared by the server, the
+ * REST API, the MCP server and the browser (the matter brief runs entirely in
+ * the lawyer's browser).
+ *
+ * Standing rule: the Atlas states what sources say and how they are classified.
+ * It never states what the law requires of a particular client.
+ */
+
+export const STANDING_RULE = 'Records state what sources say and how they are classified. They are not legal advice and do not say what the law requires of any particular client; counsel decides what applies.';
+
+export const TIERS = {
+  binding: { label: 'Binding', describes: 'Law or prudential standard in force' },
+  expected: { label: 'Expected', describes: 'Regulator expectation, guidance or recognised standard' },
+  anticipated: { label: 'Anticipated', describes: 'Made but not yet in force, under consultation, or a pending bill' },
+};
+
+export const JURISDICTIONS = {
+  AU: { name: 'Australia', depth: 'full' },
+  SG: { name: 'Singapore', depth: 'full' },
+  EU: { name: 'European Union', depth: 'core' },
+  GB: { name: 'United Kingdom', depth: 'core' },
+  NZ: { name: 'New Zealand', depth: 'core' },
+  US: { name: 'United States (insurance)', depth: 'core' },
+  INT: { name: 'International standards', depth: 'reference' },
+};
+
+export const ENTITY_TYPES = {
+  authorisedDepositTakingInstitution: 'Authorised deposit-taking institution',
+  generalInsurer: 'General insurer',
+  lifeInsurer: 'Life insurer',
+  privateHealthInsurer: 'Private health insurer',
+  superannuationTrustee: 'Superannuation trustee',
+  financialServicesLicensee: 'Financial services licensee',
+  creditLicensee: 'Credit licensee',
+  listedEntity: 'Listed entity',
+  bank: 'Bank',
+  insurer: 'Insurer',
+  capitalMarketsIntermediary: 'Capital markets intermediary',
+  paymentServiceProvider: 'Payment service provider',
+  financialInstitution: 'Financial institution',
+  privateCompany: 'Private company',
+  notForProfit: 'Not-for-profit',
+  criticalInfrastructureAssetOwner: 'Critical infrastructure asset owner',
+  defenceIndustrySupplier: 'Defence industry supplier',
+  healthServiceProvider: 'Health service provider',
+  anyOrganization: 'Any organisation',
+  other: 'Other',
+};
+
+/**
+ * Organisations no financial regulator licenses (Metamodel 2.4.0). Sources of general application (anyOrganization)
+ * reach them, so they are offered in every covered jurisdiction even before a record names them.
+ */
+export const GENERAL_ENTITY_TYPES = ['privateCompany', 'notForProfit', 'criticalInfrastructureAssetOwner', 'defenceIndustrySupplier', 'healthServiceProvider'];
+
+/** The regulated sectors (Metamodel reference data): jurisdiction, then sector, then entity type. */
+export { REGULATED_SECTORS };
+export const sectorByID = (id) => REGULATED_SECTORS.find((d) => d.regulatedSectorID === id) || null;
+/** Entity types a sector's organisations are reached by: its own and the broader ones it lists (alsoReaches). */
+export const sectorEntityTypes = (d) => (d ? [...d.entityTypes, ...(d.alsoReaches || [])] : []);
+/**
+ * Widens chosen entity types by the broader types their sectors list, so a Singapore bank also reaches records
+ * addressed to any MAS-licensed financial institution. With jurisdictions given, only those jurisdictions' sectors count.
+ */
+export function reachedEntityTypes(ets, jurisdictions = []) {
+  const out = new Set(ets);
+  for (const d of REGULATED_SECTORS) {
+    if (jurisdictions.length && !jurisdictions.includes(d.jurisdiction)) continue;
+    if (d.entityTypes.some((e) => ets.includes(e))) for (const e of d.alsoReaches || []) out.add(e);
+  }
+  return [...out];
+}
+
+export const ROLES = {
+  regulatedEntity: 'Regulated entity', board: 'Board', seniorManagement: 'Senior management', accountablePerson: 'Accountable person',
+  provider: 'AI provider', deployer: 'AI deployer', serviceProvider: 'Service provider', importer: 'Importer', distributor: 'Distributor',
+};
+
+export const STATUS = {
+  proposed: 'Under consultation or a bill', pending: 'Made, not yet in force', inForce: 'In force', amended: 'Amended',
+  superseded: 'Superseded', repealed: 'Repealed', withdrawn: 'Withdrawn',
+};
+
+export const ASSESSMENTS = {
+  aiRiskAppetite: { name: 'AI Risk Appetite', does: 'Sets the board’s AI risk appetite and the triggers that act on it' },
+  aiUseAssessment: { name: 'AI Use Assessment', does: 'Assesses a particular AI use, including AI in the supply chain' },
+  aiConfidentialityExposureAssessment: { name: 'AI Confidentiality Exposure Assessment', does: 'Assesses exposure of confidential information, such as deal information, to AI tools' },
+  aiBoardDirection: { name: 'AI Board Direction', does: 'Records the board’s directions on AI: its appetite, red lines and questions for counsel, resolved at a board meeting' },
+};
+
+/** Entity types in a financially regulated sector (Metamodel reference data), including the broader types those sectors reach. */
+export { FINANCIALLY_REGULATED_TYPES };
+
+/**
+ * Which engagements suit a scope. A financially regulated scope (any entity type or sector in one) goes to
+ * AI Risk Appetite, AI Use Assessment and AI Board Direction in connected mode; any other scope with an entity type
+ * or sector goes to AI Board Direction in standalone mode and AI Confidentiality Exposure Assessment. With neither,
+ * the use cases decide, and AI Board Direction is listed without a mode.
+ * @returns {{ profile: 'regulated'|'general'|null, assessments: string[], boardMode: 'connected'|'standalone'|null }}
+ */
+export function engagementRoute(entityTypes = [], sectors = [], useCaseIDs = []) {
+  // One routing table (src/core/solution-set.js, task 5.3), shared with the front door's solution set.
+  if (!entityTypes.length && !sectors.length) return { profile: null, assessments: [], boardMode: null };
+  const { profile, assessments, boardMode } = routeFor(entityTypes, sectors, useCaseIDs);
+  return { profile, assessments, boardMode };
+}
+
+/** The ten standardised use cases. A record mapped to all of them applies to any AI use. */
+export const ALL_USE_CASES = ['UC1', 'UC2', 'UC3', 'UC4', 'UC5', 'UC6', 'UC7', 'UC8', 'UC9', 'UC10'];
+export const appliesToAnyAIUse = (ids) => ALL_USE_CASES.every((u) => (ids || []).includes(u));
+
+/** What a source rank means, for leads and evidence. */
+export const SOURCE_RANKS = {
+  1: 'official text',
+  2: 'regulator publication',
+  3: 'standards body publication',
+  4: 'commentary',
+  5: 'other source',
+};
+
+/** Coverage note for a jurisdiction the Atlas holds no records for. */
+export const notCoveredNote = (code) => {
+  const j = JURISDICTIONS[code];
+  const name = j ? j.name : code;
+  return `The Atlas does not yet cover ${/^(United|European)/.test(name) ? 'the ' : ''}${name}. No records here does not mean no obligations apply there; check other sources.`;
+};
+
+export const AUTHORITY = { a1Productivity: 'A1 productivity', a2Analytical: 'A2 analytical', a3Decision: 'A3 decision', a4Transactional: 'A4 transactional', a5Agentic: 'A5 agentic', a6Actuation: 'A6 actuation' };
+
+const byNum = (a, b) => String(a).localeCompare(String(b), 'en', { numeric: true });
+const list = (v) => (v == null || v === '' ? [] : Array.isArray(v) ? v : String(v).split(',')).map((s) => String(s).trim()).filter(Boolean);
+const today = () => new Date().toISOString().slice(0, 10);
+
+/** Canonical JSON and SHA-256 (Web Crypto), to check provenance entries. */
+export function canonicalJSON(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJSON).join(',')}]`;
+  const keys = Object.keys(value).filter((k) => value[k] !== undefined).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${canonicalJSON(value[k])}`).join(',')}}`;
+}
+export async function sha256Hex(text) {
+  const buf = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+export async function verifyEntry(entry) {
+  const { hash, ...rest } = entry;
+  return (await sha256Hex(canonicalJSON(rest))) === hash;
+}
+
+export class Atlas {
+  /**
+   * @param {object} snapshot connector snapshot (records, provenance, policy, ledgerHead)
+   * @param {object} opts { preview: show pendingReview records (preview builds only) }
+   */
+  constructor(snapshot, { preview = false } = {}) {
+    this.snapshot = snapshot;
+    this.policy = snapshot.policy;
+    this.preview = preview && !!snapshot.includesPending;
+    const visible = new Set(['published', 'unverified', ...(this.preview ? ['pendingReview'] : [])]);
+    this.records = snapshot.records.filter((r) => visible.has(r.publicationStatus));
+    this.superseded = snapshot.records.filter((r) => r.publicationStatus === 'superseded');
+    const of = (d) => this.records.filter((r) => r.domainType === d);
+    this.obligationRecords = of('obligation');
+    this.useCaseRecords = of('useCase').sort((a, b) => byNum(a.entityID, b.entityID));
+    this.orgRecords = of('externalOrganization');
+    this.triggerRecords = of('trigger');
+    this.dataFlowRecords = of('dataFlow');
+    this.byID = new Map(this.records.map((r) => [r.entityID, r]));
+    this.provenanceByID = new Map((snapshot.provenance || []).map((e) => [e.provenanceRecordID, e]));
+    this.languageRules = (this.policy && this.policy.languageRules || []).map((r) => ({ ...r, re: new RegExp(r.pattern, 'i') }));
+  }
+
+  info() {
+    const s = this.snapshot;
+    return {
+      name: 'AI Obligations Atlas',
+      dataset: s.dataset,
+      generatedAt: s.generatedAt,
+      metamodelVersion: s.metamodelVersion,
+      interfaceVersion: s.interfaceVersion,
+      ledgerHead: s.ledgerHead,
+      preview: this.preview,
+      counts: {
+        obligations: this.obligationRecords.length,
+        useCases: this.useCaseRecords.length,
+        organizations: this.orgRecords.length,
+        instrumentChanges: this.triggerRecords.length,
+        monitoredSources: this.dataFlowRecords.length,
+      },
+      standingRule: STANDING_RULE,
+    };
+  }
+
+  org(id) {
+    const r = id && this.byID.get(id);
+    return r ? { externalOrgID: r.entityID, name: r.record.name, acronym: r.record.acronym, website: r.record.website } : null;
+  }
+
+  useCaseTitle(id) {
+    const r = this.byID.get(id);
+    return r ? r.record.title : id;
+  }
+
+  /** Public view of one obligation: the record, its source, tier, verification and provenance. */
+  view(gr) {
+    const o = gr.record;
+    const v = gr.verification || {};
+    const prov = gr.provenanceRecordIDs || [];
+    return {
+      obligationID: o.obligationID,
+      title: o.title,
+      statement: o.statement,
+      sourceTier: o.sourceTier,
+      tierLabel: TIERS[o.sourceTier] ? TIERS[o.sourceTier].label : o.sourceTier,
+      tierBasis: (o.tierBasis || []).map((b) => ({ ...b, title: this.byID.get(b.obligationID) ? this.byID.get(b.obligationID).record.title : undefined })),
+      status: o.status,
+      statusLabel: STATUS[o.status] || o.status,
+      jurisdiction: o.jurisdiction,
+      instrument: o.source.instrument,
+      citation: o.source.citation,
+      authority: o.source.authority,
+      regulator: this.org(o.source.externalOrgID),
+      obligationType: o.obligationType,
+      sourceURL: o.source.url,
+      effectiveDate: o.effectiveDate,
+      keyDates: o.effectiveDates || [],
+      entityTypes: o.entityTypes || [],
+      roles: o.roles || [],
+      useCaseIDs: o.useCaseIDs || [],
+      appliesToAnyAIUse: appliesToAnyAIUse(o.useCaseIDs),
+      supersededByObligationID: o.supersededByObligationID,
+      lastVerified: v.lastVerified || o.lastVerified,
+      stale: !!v.stale,
+      confidence: v.confidence ? { score: v.confidence.score, band: v.confidence.band } : undefined,
+      governedRecordID: gr.governedRecordID,
+      publicationStatus: gr.publicationStatus,
+      approval: gr.approval ? { approverName: gr.approval.approverName, approverRole: gr.approval.approverRole, approvedAt: gr.approval.approvedAt } : null,
+      provenanceRef: prov[prov.length - 1] || null,
+      citeAs: `${o.source.instrument}, ${o.source.citation} (${TIERS[o.sourceTier] ? TIERS[o.sourceTier].label : o.sourceTier}; last verified ${v.lastVerified || o.lastVerified}; Atlas record ${gr.governedRecordID})`,
+    };
+  }
+
+  /**
+   * Obligations matching filters. jurisdiction includes INT (international
+   * standards) unless includeInternational is false. With a useCase filter,
+   * records specific to those use cases come first, then records that apply
+   * to any AI use (left out when includeAnyUse is false).
+   */
+  findObligations(filters = {}) {
+    const jur = list(filters.jurisdiction).map((j) => j.toUpperCase());
+    const tiers = list(filters.tier);
+    const ucs = list(filters.useCase);
+    const secs = list(filters.sector).map(sectorByID).filter(Boolean);
+    for (const d of secs) if (!jur.includes(d.jurisdiction)) jur.push(d.jurisdiction);
+    const chosen = list(filters.entityType);
+    const ets = reachedEntityTypes(chosen.length ? chosen : secs.flatMap((d) => d.entityTypes), jur);
+    const roles = list(filters.role);
+    const statuses = list(filters.status);
+    const q = (filters.q || '').toLowerCase().trim();
+    const includeIntl = filters.includeInternational !== false && filters.includeInternational !== 'false';
+    const includeAnyUse = filters.includeAnyUse !== false && filters.includeAnyUse !== 'false';
+    const out = this.obligationRecords.filter((gr) => {
+      const o = gr.record;
+      if (jur.length && !jur.includes(o.jurisdiction) && !(includeIntl && o.jurisdiction === 'INT')) return false;
+      if (tiers.length && !tiers.includes(o.sourceTier)) return false;
+      if (ucs.length && !(o.useCaseIDs || []).some((u) => ucs.includes(u))) return false;
+      if (ucs.length && !includeAnyUse && appliesToAnyAIUse(o.useCaseIDs)) return false;
+      if (ets.length && !(o.entityTypes || []).some((e) => ets.includes(e) || e === 'anyOrganization')) return false;
+      if (roles.length && !(o.roles || []).some((r) => roles.includes(r))) return false;
+      if (statuses.length && !statuses.includes(o.status)) return false;
+      if (filters.current === true || filters.current === 'true') {
+        if (['superseded', 'repealed', 'withdrawn'].includes(o.status)) return false;
+      }
+      if (q && ![o.title, o.statement, o.source.instrument, o.source.citation, o.source.authority, o.obligationID].join(' ').toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const tierOrder = { binding: 0, expected: 1, anticipated: 2 };
+    const anyFirst = (a, b) => (ucs.length ? Number(appliesToAnyAIUse(a.record.useCaseIDs)) - Number(appliesToAnyAIUse(b.record.useCaseIDs)) : 0);
+    return out
+      .sort((a, b) => anyFirst(a, b) || (a.record.jurisdiction === b.record.jurisdiction ? 0 : a.record.jurisdiction === 'INT' ? 1 : b.record.jurisdiction === 'INT' ? -1 : a.record.jurisdiction < b.record.jurisdiction ? -1 : 1)
+        || tierOrder[a.record.sourceTier] - tierOrder[b.record.sourceTier]
+        || byNum(a.record.source.instrument, b.record.source.instrument)
+        || byNum(a.entityID, b.entityID))
+      .map((gr) => this.view(gr));
+  }
+
+  getObligation(id) {
+    const gr = this.obligationRecords.find((r) => r.entityID === id);
+    return gr ? this.view(gr) : null;
+  }
+
+  instruments(filters = {}) {
+    const groups = new Map();
+    for (const v of this.findObligations(filters)) {
+      const key = `${v.jurisdiction}|${v.instrument}`;
+      if (!groups.has(key)) {
+        groups.set(key, { instrument: v.instrument, jurisdiction: v.jurisdiction, authority: v.authority, regulator: v.regulator, sourceURL: v.sourceURL, tiers: [], statuses: [], obligationIDs: [], lastVerified: v.lastVerified });
+      }
+      const g = groups.get(key);
+      if (!g.tiers.includes(v.sourceTier)) g.tiers.push(v.sourceTier);
+      if (!g.statuses.includes(v.status)) g.statuses.push(v.status);
+      g.obligationIDs.push(v.obligationID);
+      if (v.lastVerified < g.lastVerified) g.lastVerified = v.lastVerified;
+    }
+    return [...groups.values()];
+  }
+
+  useCases() {
+    return this.useCaseRecords.map((r) => ({
+      ...r.record,
+      authorityLabels: r.record.anyAuthorityLevel ? ['Any'] : r.record.authorityLevels.map((a) => AUTHORITY[a] || a),
+      obligationCount: this.obligationRecords.filter((o) => (o.record.useCaseIDs || []).includes(r.entityID)).length,
+      governedRecordID: r.governedRecordID,
+      publicationStatus: r.publicationStatus,
+    }));
+  }
+
+  organizations() {
+    return this.orgRecords.map((r) => ({ ...r.record, governedRecordID: r.governedRecordID, publicationStatus: r.publicationStatus }))
+      .sort((a, b) => byNum(a.jurisdiction + a.name, b.jurisdiction + b.name));
+  }
+
+  jurisdictions() {
+    return Object.entries(JURISDICTIONS).map(([code, j]) => {
+      const obs = this.obligationRecords.filter((o) => o.record.jurisdiction === code);
+      const tiers = {};
+      for (const o of obs) tiers[o.record.sourceTier] = (tiers[o.record.sourceTier] || 0) + 1;
+      const available = obs.length > 0;
+      return { code, ...j, obligations: obs.length, tiers, available, coverage: available ? 'covered' : 'notYetCovered', ...(available ? {} : { note: notCoveredNote(code) }) };
+    });
+  }
+
+  /**
+   * Coverage notes for requested jurisdictions the Atlas holds no records for,
+   * so an empty result is never read as "no obligations".
+   */
+  coverage(requested) {
+    const codes = list(requested).map((j) => j.toUpperCase()).filter((c) => c !== 'INT');
+    const notes = [];
+    for (const code of codes) {
+      if (this.obligationRecords.some((o) => o.record.jurisdiction === code)) continue;
+      notes.push({ jurisdiction: code, name: JURISDICTIONS[code] ? JURISDICTIONS[code].name : code, coverage: 'notYetCovered', note: notCoveredNote(code) });
+    }
+    return notes;
+  }
+
+  /** Entity types used by each covered jurisdiction's records, plus the general types (GENERAL_ENTITY_TYPES). */
+  entityTypesByJurisdiction() {
+    const out = {};
+    for (const gr of this.obligationRecords) {
+      const j = gr.record.jurisdiction;
+      if (j === 'INT') continue;
+      for (const e of gr.record.entityTypes || []) {
+        if (e === 'anyOrganization' || e === 'other') continue;
+        (out[j] || (out[j] = [])).includes(e) || out[j].push(e);
+      }
+    }
+    // Every covered jurisdiction offers the general types: its sources of general application reach them.
+    for (const j of Object.keys(out)) for (const e of GENERAL_ENTITY_TYPES) out[j].includes(e) || out[j].push(e);
+    const order = Object.keys(ENTITY_TYPES);
+    for (const j of Object.keys(out)) out[j].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    return out;
+  }
+
+  /**
+   * Instrument changes (Triggers) and record versions, newest first, since a
+   * date. A commencement is dated by the day it takes effect, not the day the
+   * Act was made. Items dated after today are marked upcoming. A lead carries
+   * a public summary; the research notes behind it stay in provenance.
+   */
+  changes(since = '1970-01-01', { now = today() } = {}) {
+    const s = String(since);
+    const items = [];
+    for (const t of this.triggerRecords) {
+      const r = t.record;
+      const ic = r.instrumentChange || {};
+      const isLead = r.status === 'lead' || t.publicationStatus === 'unverified';
+      const date = (ic.changeType === 'commencement' ? ic.effectiveDate || ic.publishedDate : ic.publishedDate || ic.effectiveDate) || r.detectionDate || t.publishedAt.slice(0, 10);
+      if (date < s.slice(0, 10)) continue;
+      const rankLabel = SOURCE_RANKS[ic.sourceRank] || 'source';
+      items.push({
+        kind: isLead ? 'lead' : 'instrumentChange',
+        date,
+        upcoming: date > now,
+        title: isLead ? r.label.replace(/^Lead:\s*/, '') : r.label,
+        summary: isLead
+          ? `${ic.instrument || 'This instrument'} has not yet been checked against the official text (read so far: ${rankLabel}). It sets no status or date until a reviewer confirms it.`
+          : r.description,
+        sourceKind: SOURCE_RANKS[ic.sourceRank] || undefined,
+        changeType: r.instrumentChange && r.instrumentChange.changeType,
+        instrument: r.instrumentChange && r.instrumentChange.instrument,
+        // A lead's jurisdiction comes from the record it points to, when the lead does not carry one.
+        jurisdiction: ic.jurisdiction || ((r.affectedEntities || []).map((x) => (/^OBL-([A-Z]{2,3})-/.exec(x.entityID) || [])[1]).find(Boolean)),
+        effectiveDate: r.instrumentChange && r.instrumentChange.effectiveDate,
+        sourceURL: r.instrumentChange && r.instrumentChange.sourceURL,
+        sourceRank: r.instrumentChange && r.instrumentChange.sourceRank,
+        affects: (r.affectedEntities || []).map((a) => a.entityID),
+        triggerID: r.triggerID,
+        publicationStatus: t.publicationStatus,
+        governedRecordID: t.governedRecordID,
+      });
+    }
+    for (const gr of [...this.obligationRecords, ...this.superseded.filter((x) => x.domainType === 'obligation')]) {
+      if (gr.publishedAt.slice(0, 10) < s.slice(0, 10) || gr.publicationStatus === 'pendingReview') continue;
+      items.push({
+        kind: gr.publicationStatus === 'superseded' ? 'recordSuperseded' : gr.version > 1 ? 'recordUpdated' : 'recordPublished',
+        date: gr.publishedAt.slice(0, 10),
+        upcoming: false,
+        title: gr.record.title,
+        obligationID: gr.entityID,
+        governedRecordID: gr.governedRecordID,
+        approval: gr.approval ? gr.approval.approverName : null,
+        publicationStatus: gr.publicationStatus,
+      });
+    }
+    return items.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  }
+
+  /** Provenance for a provenance record ID, governed record ID or entity ID, with hash checks. */
+  async provenance(ref) {
+    let entries = [];
+    let subject = null;
+    if (this.provenanceByID.has(ref)) {
+      const e = this.provenanceByID.get(ref);
+      subject = e.subject && e.subject.entityID;
+      entries = [e];
+    } else {
+      const id = String(ref).split('@')[0];
+      const gr = this.byID.get(id);
+      if (!gr) return null;
+      subject = id;
+      entries = (gr.provenanceRecordIDs || []).map((p) => this.provenanceByID.get(p)).filter(Boolean);
+    }
+    const checked = [];
+    for (const e of entries.sort((a, b) => a.sequence - b.sequence)) checked.push({ ...e, hashVerified: await verifyEntry(e) });
+    const gr = this.byID.get(subject);
+    return {
+      subject,
+      governedRecordID: gr ? gr.governedRecordID : undefined,
+      publicationStatus: gr ? gr.publicationStatus : undefined,
+      approval: gr && gr.approval ? gr.approval : null,
+      entries: checked,
+      allHashesVerified: checked.every((e) => e.hashVerified),
+      ledgerHead: this.snapshot.ledgerHead,
+      note: 'Each entry carries a SHA-256 hash of its canonical JSON and the hash of the entry before it in the Reasoning Fabric provenance ledger.',
+    };
+  }
+
+  /** Language rule violations in any string of a value, for a scope. */
+  languageIssues(value, scope = 'response') {
+    const rules = this.languageRules.filter((r) => !r.appliesTo || r.appliesTo.includes(scope));
+    const issues = [];
+    const visit = (v, path) => {
+      if (typeof v === 'string') {
+        for (const r of rules) if (r.re.test(v)) issues.push({ ruleID: r.ruleID, path, text: v.slice(0, 120) });
+      } else if (Array.isArray(v)) v.forEach((x, i) => visit(x, `${path}/${i}`));
+      else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) if (!/url|URL|ID$|IDs$|Ref$|hash/i.test(k) && k !== 'languageRules') visit(x, `${path}/${k}`);
+    };
+    visit(value, '');
+    return issues;
+  }
+
+  /** The dataset policy for people to read: everything except the language rules' match patterns. */
+  publicPolicy() {
+    const p = this.policy || {};
+    return {
+      datasetPolicyID: p.datasetPolicyID, version: p.version, effectiveFrom: p.effectiveFrom, methodOwner: p.methodOwner,
+      sourcePrecedence: p.sourcePrecedence || [], autonomyRules: p.autonomyRules || [], datePrecedence: p.datePrecedence || [],
+      freshness: p.freshness || [], confidenceBands: p.confidenceBands || {},
+      languageRules: (p.languageRules || []).map((r) => ({ ruleID: r.ruleID, description: r.description, appliesTo: r.appliesTo })),
+    };
+  }
+
+  /** Compact dataset for the web app, which filters and builds matter briefs in the browser. */
+  dataset() {
+    return {
+      info: this.info(),
+      obligations: this.findObligations({}),
+      useCases: this.useCases(),
+      organizations: this.organizations(),
+      jurisdictions: this.jurisdictions(),
+      entityTypesByJurisdiction: this.entityTypesByJurisdiction(),
+      sectors: REGULATED_SECTORS.filter((d) => this.jurisdictions().some((j) => j.code === d.jurisdiction && j.available)),
+      changes: this.changes(),
+      policy: this.publicPolicy(),
+    };
+  }
+}
+
+/**
+ * Build a matter brief. Pure function over the dataset, so it runs in the
+ * browser and no client facts leave it.
+ *
+ * @param {object} data   Atlas.dataset() output
+ * @param {object} input  { matterLabel, jurisdictions[], sectors[] (regulated sector ids), entityTypes[], useCaseIDs[], consequence: { UCn: 'c1'..'c5' }, preparedBy }
+ */
+export function buildMatterBrief(data, input) {
+  const jur = (input.jurisdictions || []).map((j) => j.toUpperCase());
+  const secs = (input.sectors || []).map(sectorByID).filter(Boolean);
+  for (const d of secs) if (!jur.includes(d.jurisdiction)) jur.push(d.jurisdiction);
+  const ets = (input.entityTypes || []).length ? input.entityTypes : secs.flatMap((d) => d.entityTypes);
+  const reach = reachedEntityTypes(ets, jur);
+  const ucs = input.useCaseIDs || [];
+  const obligations = data.obligations.filter((o) => (!jur.length || jur.includes(o.jurisdiction) || o.jurisdiction === 'INT')
+    && (!reach.length || o.entityTypes.some((e) => reach.includes(e) || e === 'anyOrganization'))
+    && (!ucs.length || o.useCaseIDs.some((u) => ucs.includes(u)))
+    && !['superseded', 'repealed', 'withdrawn'].includes(o.status));
+  const ref = (o) => ({
+    obligationID: o.obligationID, title: o.title, instrument: o.instrument, citation: o.citation, jurisdiction: o.jurisdiction,
+    appliesToAnyAIUse: appliesToAnyAIUse(o.useCaseIDs),
+    status: o.status, keyDates: o.keyDates, useCaseIDs: o.useCaseIDs.filter((u) => !ucs.length || ucs.includes(u)),
+    sourceURL: o.sourceURL, lastVerified: o.lastVerified, governedRecordID: o.governedRecordID, publicationStatus: o.publicationStatus, provenanceRef: o.provenanceRef,
+  });
+  const byTier = { binding: [], expected: [], anticipated: [] };
+  // Records specific to the selected use cases come before records that apply to any AI use.
+  const sorted = obligations.slice().sort((a, b) => Number(appliesToAnyAIUse(a.useCaseIDs)) - Number(appliesToAnyAIUse(b.useCaseIDs)));
+  for (const o of sorted) (byTier[o.sourceTier] || (byTier[o.sourceTier] = [])).push(ref(o));
+  const ucByID = new Map(data.useCases.map((u) => [u.useCaseID, u]));
+
+  const questions = [];
+  const consequence = input.consequence || {};
+  for (const u of ucs) {
+    const uc = ucByID.get(u);
+    if (!uc || consequence[u]) continue; // only where counsel has not yet set a level
+    questions.push({ about: u, question: `Measured against the client’s own thresholds, which consequence level (C1 to C5) should counsel set for ${u} (${uc.title})?` });
+  }
+  const instruments = new Map();
+  for (const o of obligations) {
+    const k = `${o.instrument}`;
+    if (!instruments.has(k)) instruments.set(k, o);
+  }
+  for (const o of instruments.values()) {
+    if (o.sourceTier === 'binding') questions.push({ about: o.obligationID, question: `Does ${o.instrument} reach the client’s arrangements for the selected use cases, and if so, what do its provisions call for?` });
+    else if (o.sourceTier === 'expected') questions.push({ about: o.obligationID, question: `What weight should the client give to ${o.instrument} (${o.authority}) in its approach to the selected use cases?` });
+    else {
+      const d = (o.keyDates || []).find((k) => ['commences', 'applies'].includes(k.dateType));
+      questions.push({ about: o.obligationID, question: `How should the client prepare for ${o.instrument}, which is ${o.status === 'proposed' ? 'under consultation' : 'made but not yet in force'}${d ? ` (key date ${d.date})` : ''}?` });
+    }
+  }
+
+  const fits = new Map();
+  for (const u of ucs) for (const a of (ucByID.get(u) || {}).assessmentTypes || []) {
+    if (!fits.has(a)) fits.set(a, []);
+    fits.get(a).push(u);
+  }
+  // Routed by the scope's entity types and sectors (engagementRoute); with neither, by the use cases alone.
+  const route = routeFor(input.entityTypes || [], secs, ucs, [...fits.keys()]);
+  const order = route.assessments;
+  const why = { regulated: ROUTING_TABLE.profiles.regulated.reason, general: ROUTING_TABLE.profiles.general.reason };
+  const engagementsThatFit = order.map((a) => ({
+    assessmentType: a, name: ASSESSMENTS[a].name, purpose: ASSESSMENTS[a].does,
+    useCaseIDs: a === 'aiBoardDirection' ? ucs.slice() : (fits.get(a) || []),
+    ...(a === 'aiBoardDirection' && route.boardMode ? { mode: route.boardMode } : {}),
+    reason: route.added.includes(a) ? 'Fits the use cases in scope' : route.profile ? why[route.profile] : (a === 'aiBoardDirection' ? 'Fits any board; choose an entity type or sector to see which mode' : 'Fits the use cases in scope'),
+  }));
+
+  return {
+    briefFormat: 'triodian.matterBrief/1',
+    generatedAt: new Date().toISOString(),
+    matterLabel: input.matterLabel || 'Untitled matter',
+    ...(input.preparedBy ? { preparedBy: input.preparedBy } : {}),
+    scope: {
+      jurisdictions: jur,
+      ...(secs.length ? { sectors: secs.map((d) => ({ regulatedSectorID: d.regulatedSectorID, name: d.name })) } : {}),
+      entityTypes: ets,
+      useCases: ucs.map((u) => ({ useCaseID: u, title: (ucByID.get(u) || {}).title, consequenceLevel: (input.consequence || {})[u] || null })),
+    },
+    dataset: { name: data.info.name, generatedAt: data.info.generatedAt, metamodelVersion: data.info.metamodelVersion, ledgerHead: data.info.ledgerHead, preview: data.info.preview },
+    obligationsByTier: byTier,
+    counts: {
+      binding: byTier.binding.length, expected: byTier.expected.length, anticipated: byTier.anticipated.length,
+      specificToUseCases: obligations.filter((o) => !appliesToAnyAIUse(o.useCaseIDs)).length,
+      anyAIUse: obligations.filter((o) => appliesToAnyAIUse(o.useCaseIDs)).length,
+    },
+    coverage: jur.filter((j) => j !== 'INT' && !data.obligations.some((o) => o.jurisdiction === j)).map((j) => ({ jurisdiction: j, coverage: 'notYetCovered', note: notCoveredNote(j) })),
+    questionsForCounsel: questions,
+    engagementsThatFit,
+    ...(route.profile ? { profile: route.profile } : {}),
+    notices: [
+      STANDING_RULE,
+      'Tiers describe sources: Binding (law or prudential standard in force), Expected (regulator expectation, guidance or recognised standard), Anticipated (made but not yet in force, or under consultation).',
+      'This brief was built in the browser. The matter label, scope and consequence levels were not sent to Triodian.',
+      ...(data.info.preview ? ['Preview data: records marked pending review have not yet been approved by a Triodian reviewer.'] : []),
+    ],
+  };
+}
+
+/* ---------- client portfolio (development plan task 2.5) ----------
+   One entry per client, kept in the lawyer's browser and moved between browsers as a file. Nothing here is sent
+   to the server. An entry holds the brief's choices (so the form can be restored) and the last brief built from
+   them. Entries are matched by their label, ignoring case and spacing. */
+export const PORTFOLIO_FORMAT = 'triodian.atlasPortfolio/1';
+export const PORTFOLIO_LIMIT = 200;
+const pfKey = (label) => String(label || '').trim().replace(/\s+/g, ' ').toLowerCase();
+const strs = (v, n = 40) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string').slice(0, n) : []);
+
+/** The choices behind a brief, so a brief saved before the portfolio existed can be reopened in the form. */
+export function draftFromBrief(b) {
+  const sc = (b && b.scope) || {};
+  const ucs = Array.isArray(sc.useCases) ? sc.useCases.filter((u) => u && typeof u.useCaseID === 'string') : [];
+  const consequence = {};
+  for (const u of ucs) if (/^C[1-5]$/i.test(u.consequenceLevel || '')) consequence[u.useCaseID] = u.consequenceLevel.toLowerCase();
+  return {
+    matterLabel: typeof (b && b.matterLabel) === 'string' ? b.matterLabel : '',
+    jurisdictions: strs(sc.jurisdictions), entityTypes: strs(sc.entityTypes), useCaseIDs: ucs.map((u) => u.useCaseID),
+    sectors: Array.isArray(sc.sectors) ? sc.sectors.map((x) => (x && typeof x === 'object' ? x.regulatedSectorID : x)).filter((x) => typeof x === 'string') : [],
+    consequence,
+  };
+}
+
+/** A clean entry, or null when it cannot be one. */
+function cleanEntry(e) {
+  if (!e || typeof e !== 'object' || !e.draft || typeof e.draft !== 'object') return null;
+  const d = e.draft;
+  const label = String(d.matterLabel || e.label || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  if (!label) return null;
+  const consequence = {};
+  for (const [k, v] of Object.entries(d.consequence && typeof d.consequence === 'object' ? d.consequence : {})) if (/^UC\d{1,3}$/.test(k) && /^c[1-5]$/.test(v)) consequence[k] = v;
+  const draft = { matterLabel: label, jurisdictions: strs(d.jurisdictions), entityTypes: strs(d.entityTypes, 60), sectors: strs(d.sectors), useCaseIDs: strs(d.useCaseIDs), consequence };
+  const savedAt = typeof e.savedAt === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(e.savedAt) ? e.savedAt : '1970-01-01T00:00:00.000Z';
+  const brief = e.brief && typeof e.brief === 'object' && e.brief.briefFormat ? e.brief : null;
+  return { label, draft, savedAt, ...(brief ? { brief } : {}) };
+}
+
+/** The portfolio as stored, newest first, one entry per label. Accepts the stored object, a list of entries, or nothing. */
+export function normalisePortfolio(p) {
+  const list = Array.isArray(p) ? p : (p && Array.isArray(p.clients) ? p.clients : []);
+  const byKey = new Map();
+  for (const raw of list) {
+    const e = cleanEntry(raw); if (!e) continue;
+    const k = pfKey(e.label), had = byKey.get(k);
+    if (!had || e.savedAt > had.savedAt) byKey.set(k, e);
+  }
+  return [...byKey.values()].sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0)).slice(0, PORTFOLIO_LIMIT);
+}
+
+/** Add or replace one client's entry. */
+export function saveToPortfolio(portfolio, draft, brief, savedAt) {
+  const e = cleanEntry({ draft, brief, savedAt });
+  if (!e) return { portfolio: normalisePortfolio(portfolio), error: 'Give the matter a label first: the portfolio keeps one brief per label.' };
+  const rest = normalisePortfolio(portfolio).filter((x) => pfKey(x.label) !== pfKey(e.label));
+  return { portfolio: normalisePortfolio([e, ...rest]), replaced: rest.length < normalisePortfolio(portfolio).length };
+}
+
+export function removeFromPortfolio(portfolio, label) {
+  return normalisePortfolio(portfolio).filter((x) => pfKey(x.label) !== pfKey(label));
+}
+
+/** The file a portfolio is exported as. */
+export function exportPortfolio(portfolio, exportedAt) {
+  return { format: PORTFOLIO_FORMAT, exportedAt, note: 'Matter briefs kept in the AI Obligations Atlas in one browser. Import it into another browser from the Matter brief page.', clients: normalisePortfolio(portfolio) };
+}
+
+/** Read an exported file and merge it into the portfolio: an entry replaces the one with the same label only when it is newer. */
+export function importPortfolio(portfolio, text) {
+  let o = text;
+  if (typeof text === 'string') { try { o = JSON.parse(text); } catch { return { error: 'This file is not a portfolio: it is not valid JSON.' }; } }
+  if (!o || typeof o !== 'object' || o.format !== PORTFOLIO_FORMAT || !Array.isArray(o.clients)) {
+    return { error: o && o.briefFormat ? 'This is a single matter brief, not a portfolio. Load it in the assessment app it was made for.' : `This file is not a portfolio exported from the AI Obligations Atlas (format ${PORTFOLIO_FORMAT}).` };
+  }
+  const mine = normalisePortfolio(portfolio), theirs = normalisePortfolio(o.clients);
+  const counts = { added: 0, updated: 0, keptNewer: 0, skipped: o.clients.length - theirs.length };
+  const byKey = new Map(mine.map((e) => [pfKey(e.label), e]));
+  for (const e of theirs) {
+    const had = byKey.get(pfKey(e.label));
+    if (!had) { byKey.set(pfKey(e.label), e); counts.added++; } else if (e.savedAt > had.savedAt) { byKey.set(pfKey(e.label), e); counts.updated++; } else counts.keptNewer++;
+  }
+  return { portfolio: normalisePortfolio([...byKey.values()]), counts };
+}
+
+export { list as splitList, today };

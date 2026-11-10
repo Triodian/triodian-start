@@ -1,0 +1,33 @@
+// Cloudflare Worker configuration for Triodian Start, the front door (development plan phase 5).
+// Same shape as the engagement apps. People sign up and sign in at /login; Cloudflare Access guards /auth/email only,
+// with an email one-time PIN policy open to everyone, so anyone with an email address can sign up (docs/setup.md).
+// Start keeps its own sessions in its own database and is NOT bound to the suite's identity database: a prospect is not
+// a user of any engagement app, so signing up here opens nothing else.
+{
+  "name": "triodian-start",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "start.triodian.com", "custom_domain": true }],
+  // Create with `npx wrangler d1 create triodian-start-db` and put the id here (docs/setup.md).
+  "d1_databases": [{ "binding": "DB", "database_name": "triodian-start-db", "database_id": "REPLACE-WITH-THE-START-DATABASE-ID" }],
+  "observability": { "enabled": true },
+  // ATLAS_URL: the Atlas that serves the routing table and the solution set (task 5.3). An ATLAS service binding to the
+  // Atlas Worker may be added instead; the app uses it when present. ADMINS: more Triodian administrators, comma-separated.
+  // Try first (task 5.8) needs the DEMO_SESSION_KEY secret, the same value the engagement apps hold (docs/setup.md).
+  "vars": { "SUITE_DEMO": "on", "ATLAS_URL": "https://obligations-atlas.triodian.com", "ADMINS": "" },
+  "env": {
+    // Test copy with its own database. Deployed with `npx wrangler deploy --env test`. It reads the Atlas test site.
+    "test": {
+      "name": "triodian-start-test",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [{ "pattern": "start-test.triodian.com", "custom_domain": true }],
+      "d1_databases": [{ "binding": "DB", "database_name": "triodian-start-test-db", "database_id": "REPLACE-WITH-THE-START-TEST-DATABASE-ID" }],
+      "vars": { "SUITE_DEMO": "on", "APP_HOST_SUFFIX": "-test", "SITE_LABEL": "Test site", "SITE_URL": "https://start-test.triodian.com", "ATLAS_URL": "https://obligations-atlas-test.triodian.com", "ADMINS": "" },
+      "observability": { "enabled": true }
+    }
+  }
+}
