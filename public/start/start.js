@@ -70,6 +70,13 @@
     return h + '</section>';
   }
 
+  // Marketing email from Triodian: opt-in, never ticked for the person; saved as soon as it changes.
+  function marketing() {
+    var m = S.me.prospect.marketing, on = !!(m && m.consent);
+    return '<section class="mkt" id="marketing"><label class="mkt-row"><input type="checkbox" id="mkt"' + (on ? ' checked' : '') + '><span><strong>Keep me informed.</strong> ' + esc(S.me.marketingWording) + '</span></label>'
+      + '<p class="small soft" id="mkt-note">' + (m ? (on ? 'You opted in on ' + esc(String(m.at).slice(0, 10)) + '. Untick to stop.' : 'You are not on Triodian’s mailing list.') : 'Optional. Leaving it unticked changes nothing else here.') + '</p></section>';
+  }
+
   // Beside the questions, as the Atlas matter brief shows its scope: the answers so far and Save.
   function aside() {
     var t = T(), a = S.a, nm = function (list, id, key) { var x = (list || []).find(function (i) { return i[key || 'id'] === id; }); return x ? x.name : ''; };
@@ -91,6 +98,7 @@
       + '<p class="lede">Answer a few questions. Each answer changes what comes next, and the engagements that fit appear below as soon as we know who you are and what kind of organisation it is.</p></div>'
       + (msg === 'off' ? '<p class="notice">Worked examples open from the demo site only.</p>' : '')
       + '<div class="fields"><label>Your name<input id="f-name" value="' + esc(S.name) + '" maxlength="120" autocomplete="name"></label><label>Organisation<input id="f-org" value="' + esc(S.org) + '" maxlength="120" autocomplete="organization"></label></div>'
+      + marketing()
       + '<div class="split"><div class="qs">' + questions() + '</div>' + aside() + '</div>'
       + solution()
       + '<p class="small soft" style="margin-top:22px">Nothing else opens until Triodian sets up your engagement with you: forming the team, the invitations and the journey come next.</p>';
@@ -120,6 +128,14 @@
     else if (t.id === 'f-org') { S.org = t.value; return; }
     else return;
     S.saved = ''; preview();
+  });
+  main.addEventListener('change', function (ev) {
+    if (ev.target.id !== 'mkt') return;
+    var want = ev.target.checked;
+    api('PUT', '/api/marketing', { consent: want }).then(function (r) {
+      if (!r.ok) { toast(r.body.error || 'Not saved.'); ev.target.checked = !want; return; }
+      S.me.prospect = r.body.prospect; render(); toast(want ? 'Thank you: you will hear from Triodian.' : 'Done: you are off the mailing list.');
+    });
   });
   main.addEventListener('click', function (ev) {
     if (ev.target.id !== 'save') return;
