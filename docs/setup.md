@@ -30,7 +30,8 @@ Import a repository) once for each Worker: `npx wrangler deploy` for live, `npx 
 
 ## 3. Sign-up through Cloudflare Access
 
-In Zero Trust → Access → Applications, add a self-hosted application for each site, covering **only the path
+In Zero Trust → Access controls → Applications, choose Create new application → Self-hosted and private → Add
+public hostname, once for each site, covering **only the path
 `/auth/email`**:
 
 | Site | Application domain | Path |
@@ -72,10 +73,11 @@ the provider. Whichever way people sign in, Start learns only their email addres
 
 For each way you add, on each site:
 
-1. **Add the login method** in Zero Trust → Settings → Authentication → Login methods (Cloudflare's guide for each
+1. **Add the login method** in Zero Trust → Integrations → Identity providers → Add new identity provider (Cloudflare's guide for each
    provider says what to create on the provider's side).
-2. **Add an Access application**, self-hosted, for the site's domain and the path below, with **only that login
-   method** ticked, **Instant Auth** on, and a policy of Allow, Include **Everyone**.
+2. **Add an Access application** (Access controls → Applications → Create new application → Self-hosted and private →
+   Add public hostname) for the site's domain and the path below, with **only that login
+   method** selected, **Apply instant authentication** on, and a policy of Allow, Include **Everyone**.
 3. **Add its AUD tag to `ACCESS_AUD`**, which holds every application's tag for the site, separated by commas:
    `npx wrangler secret put ACCESS_AUD --env test`, then paste `<email tag>,<google tag>,…`.
 4. **Add the way to `SIGN_IN_METHODS`** for that site in `wrangler.jsonc`, for example `"google,microsoft,email"`, and
