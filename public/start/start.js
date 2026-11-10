@@ -21,9 +21,9 @@
   var orgChosen = function () { return !!(S.a.sector || S.a.entityType); };
 
   function opt(name, value, label, on, note) {
-    return '<label class="opt' + (note ? ' off' : '') + '"><input type="radio" name="' + name + '" value="' + esc(value) + '"' + (on ? ' checked' : '') + '> ' + esc(label) + (note ? ' <span class="small soft">' + esc(note) + '</span>' : '') + '</label>';
+    return '<label class="toggle"><input type="radio" name="' + name + '" value="' + esc(value) + '"' + (on ? ' checked' : '') + '><span>' + esc(label) + (note ? ' <span class="note">' + esc(note) + '</span>' : '') + '</span></label>';
   }
-  function q(id, title, why, body) { return '<section class="q" id="q-' + id + '"><h2>' + esc(title) + '</h2>' + (why ? '<p class="why small soft">' + esc(why) + '</p>' : '') + '<div class="opts">' + body + '</div></section>'; }
+  function q(id, title, why, body) { var m = /^(\d) · (.*)$/.exec(title); return '<section class="q" id="q-' + id + '"><h2>' + (m ? '<span class="stepno">' + m[1] + '</span>' + esc(m[2]) : esc(title)) + '</h2>' + (why ? '<p class="why small soft">' + esc(why) + '</p>' : '') + '<div class="opts">' + body + '</div></section>'; }
 
   function questions() {
     var t = T(), a = S.a, h = '';
@@ -55,7 +55,7 @@
     var h = '<section class="sol" id="solution" aria-live="polite"><h2 class="sh" style="margin:0">Your solution set' + (s.profileName ? ' · ' + esc(s.profileName) : '') + '</h2>';
     (s.notices || []).forEach(function (n) { h += '<p class="notice">' + esc(n) + '</p>'; });
     s.engagements.forEach(function (e) {
-      h += '<article class="eng' + (e.startHere ? ' start' : '') + '" data-eng="' + esc(e.assessmentType) + '"><h3><span class="stepno">Step ' + e.step + '</span>' + esc(e.name)
+      h += '<article class="eng' + (e.startHere ? ' start' : '') + '" data-eng="' + esc(e.assessmentType) + '"><h3><span class="engno">Step ' + e.step + '</span>' + esc(e.name)
         + (e.mode ? ' <span class="badge b-grey">' + esc(e.mode === 'connected' ? 'Connected mode' : 'Standalone mode') + '</span>' : '')
         + (e.startHere ? ' <span class="badge b-green">Start here</span>' : '') + '</h3>'
         + '<p>' + esc(e.why) + '</p><p class="small soft">' + esc(e.purpose) + '</p>'
@@ -64,24 +64,37 @@
         + '<div class="needs"><div><h4>People</h4><ul>' + e.needs.people.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul></div>'
         + '<div><h4>Documents</h4><ul>' + e.needs.documents.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul></div>'
         + '<div><h4>Sessions</h4><p class="small" style="margin:4px 0 0">' + esc(e.needs.sessions) + '</p></div></div>'
-        + '<div class="acts">' + (S.me.tryFirst ? '<a class="btn sm" href="/auth/try?app=' + encodeURIComponent(e.assessmentType) + '">Try the worked example</a>' : '') + '</div></article>';
+        + '<div class="acts">' + (S.me.tryFirst ? '<a class="btn sm" href="/auth/try?from=start&amp;app=' + encodeURIComponent(e.assessmentType) + '">Try the worked example</a>' : '') + '</div></article>';
     });
     h += '<p><a class="btn" id="brief" href="' + esc(s.matterBrief.url) + '" target="_blank" rel="noopener">Open the matter brief for this scope</a> <span class="small soft">Opens the AI Obligations Atlas, with your jurisdiction, organisation type and use cases chosen.</span></p>';
     return h + '</section>';
+  }
+
+  // Beside the questions, as the Atlas matter brief shows its scope: the answers so far and Save.
+  function aside() {
+    var t = T(), a = S.a, nm = function (list, id, key) { var x = (list || []).find(function (i) { return i[key || 'id'] === id; }); return x ? x.name : ''; };
+    var org = a.sector ? nm(t.sectors, a.sector, 'regulatedSectorID') : a.entityType ? (t.entityTypeNames[a.entityType] || (a.entityType === 'other' ? 'Another kind of organisation' : a.entityType)) : '';
+    var row = function (k, v) { return '<dt>' + esc(k) + '</dt><dd>' + (v ? esc(v) : '<span class="soft">Not yet</span>') + '</dd>'; };
+    return '<aside class="facts" aria-label="Your answers"><h2>Your answers</h2><dl class="kv">'
+      + row('You', nm(t.roles, a.role)) + row('Where', nm(t.jurisdictions, a.jurisdiction, 'code')) + row('Organisation', org) + row('Size', nm(t.sizes, a.size)) + row('Prompted by', nm(t.prompts, a.prompt))
+      + row('Route', S.sol && S.sol.profileName) + '</dl>'
+      + '<button class="btn primary" id="save">Save my answers</button><p class="saved" id="saved" style="margin:8px 0 0">' + esc(S.saved) + '</p>'
+      + (S.sol ? '<p class="small" style="margin:10px 0 0"><a href="#solution">See the engagements that fit ↓</a></p>' : '') + '</aside>';
   }
 
   function render() {
     var p = S.me.prospect;
     document.getElementById('who').textContent = p.email;
     var msg = new URLSearchParams(location.search).get('try');
+    var keep = window.scrollY;
     main.innerHTML = '<div class="hero" style="margin-bottom:16px"><p class="eyebrow">Signed up as ' + esc(p.email) + '</p><h1>Which engagements fit?</h1>'
       + '<p class="lede">Answer a few questions. Each answer changes what comes next, and the engagements that fit appear below as soon as we know who you are and what kind of organisation it is.</p></div>'
       + (msg === 'off' ? '<p class="notice">Worked examples open from the demo site only.</p>' : '')
       + '<div class="fields"><label>Your name<input id="f-name" value="' + esc(S.name) + '" maxlength="120" autocomplete="name"></label><label>Organisation<input id="f-org" value="' + esc(S.org) + '" maxlength="120" autocomplete="organization"></label></div>'
-      + '<div class="qs">' + questions() + '</div>'
-      + '<p style="margin-top:16px"><button class="btn primary" id="save">Save my answers</button> <span class="saved" id="saved">' + esc(S.saved) + '</span></p>'
+      + '<div class="split"><div class="qs">' + questions() + '</div>' + aside() + '</div>'
       + solution()
       + '<p class="small soft" style="margin-top:22px">Nothing else opens until Triodian sets up your engagement with you: forming the team, the invitations and the journey come next.</p>';
+    window.scrollTo(0, keep);
   }
 
   function preview() {
