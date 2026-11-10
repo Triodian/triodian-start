@@ -67,7 +67,7 @@ sign-ups at `/api/admin/prospects`.
 
 ## 6. More ways to sign in (optional)
 
-The sign-in page shows a button for each way listed in `SIGN_IN_METHODS` (in `wrangler.jsonc`, `email` to start with).
+The home page shows a sign-in button for each way listed in `SIGN_IN_METHODS` (in `wrangler.jsonc`, `email` to start with).
 Each way has its own path and its own Access application with just that login method, so its button goes straight to
 the provider. Whichever way people sign in, Start learns only their email address.
 

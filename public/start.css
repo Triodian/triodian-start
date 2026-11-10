@@ -73,3 +73,14 @@ aside.facts .btn{width:100%;justify-content:center}
 .mkt-row{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:14px}
 .mkt-row input{margin-top:3px;width:18px;height:18px;accent-color:var(--navy);flex-shrink:0}
 .mkt p{margin:6px 0 0 28px}
+
+/* Sign-in on the home page */
+.signin-h{font:600 15px/1.3 var(--sans);margin:16px 0 8px}
+.methods{display:grid;gap:10px;max-width:420px;margin:0 0 12px}
+.methods .btn{width:100%;justify-content:center;border-radius:8px}
+.methods .btn.provider{background:#fff;border:1px solid #C3CAD3;color:var(--ink)}
+.methods .btn.provider:hover{border-color:var(--navy);background:var(--grey-bg)}
+.methods .or{display:flex;align-items:center;gap:10px;color:var(--ink-faint);font-size:12px}
+.methods .or::before,.methods .or::after{content:"";flex:1;height:1px;background:var(--rule)}
+.msg-bad{background:var(--red-bg);color:var(--red);border-radius:8px;padding:9px 12px;font-size:14px}
+.msg-ok{background:var(--green-bg);color:var(--green);border-radius:8px;padding:9px 12px;font-size:14px}

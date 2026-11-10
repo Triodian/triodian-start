@@ -26,7 +26,7 @@ function atlas(env) {
 }
 const admins = env => BOOTSTRAP_ADMINS.concat(String(env.ADMINS || '').split(',').map(x => x.trim()).filter(Boolean));
 
-// The landing page, the sign-in page and the assets are open; /start/ (the questions) needs a session.
+// The home page (with sign-in) and the assets are open; /start/ (the questions) needs a session.
 const OPEN_PAGES = new Set(['/', '/index.html']);
 
 export default {
@@ -40,6 +40,9 @@ export default {
     // Try first (task 5.8): open an app's worked example as the shared demo account, with or without signing up.
     if (url.pathname === '/auth/try') return tryFirst(request, env);
     if (url.pathname === '/auth/try-status') return json({ on: tryFirstOn(env) });
+    // Sign-in lives on the home page. session.js (shared with the apps) sends people to /login; send them home with the
+    // same message and destination.
+    if (url.pathname === '/login' || url.pathname.startsWith('/login/')) return new Response(null, { status: 303, headers: { Location: '/' + url.search, 'Cache-Control': 'no-store' } });
     if (!url.pathname.startsWith('/api/')) {
       if (!OPEN_PAGES.has(url.pathname)) { const g = await gate(request, env); if (g) return g; }
       return markDemo(await env.ASSETS.fetch(request), env);
