@@ -87,6 +87,8 @@ function stepStart() {
   const ps = problems(), inv = invitations(engs(), team(), S.org), started = S.v.started && !S.dirty;
   const people = inv.map(x => `<tr><td>${esc(x.name || '—')}</td><td>${esc(x.email)}</td><td>${x.roles.map(r => esc(r.engagementName + ': ' + r.roleName)).join('<br>')}</td></tr>`).join('');
   return `<h2 class="team-h">Check and start</h2>
+    ${S.v.status === 'approved' ? '<p class="msg-ok" id="approved">Triodian is setting up your engagement with this team. To change it now, ask Triodian.</p>' : ''}
+    ${S.v.returned ? `<section class="role bad" id="returned"><div class="role-h"><h3>Triodian sent this back</h3></div><p style="margin:0">${esc(S.v.returned.note)}</p><p class="small soft">Change what is needed, then ask again.</p></section>` : ''}
     ${started ? '<p class="msg-ok" id="started">Triodian has your team and will set up the engagement with you. You can still change the team; a change takes the request back until you ask again.</p>' : ''}
     ${ps.length ? `<section class="role bad" id="blockers"><div class="role-h"><h3>The engagement cannot start yet</h3><span class="badge b-red">${ps.length} to fix</span></div>
       <ul class="problems">${ps.map(p => `<li>${esc(p.reason)} <button class="lnk" data-step="${p.engagement === null ? WHO : S.v.engagements.findIndex(e => e.assessmentType === p.engagement)}">Fix</button></li>`).join('')}</ul></section>`
@@ -99,7 +101,7 @@ function stepStart() {
       <p class="small soft">Invitations are held until Triodian sets up the engagement. Each person then gets one email listing their roles, and signs in with that address.</p>
       ${inv.length ? `<details class="small"><summary>See the invitation ${esc(inv[0].name || inv[0].email)} will get</summary><pre class="invite">${esc('Subject: ' + inv[0].subject + '\n\n' + inv[0].text)}</pre></details>` : ''}</section>
     <section class="role tri"><div class="role-h"><h3>Triodian’s team</h3><span class="badge b-grey">Requested when you start</span></div><p class="small soft">Triodian names its own people for each engagement. Its peer reviewer and validation are never the assessor.</p></section>
-    <p class="acts"><button class="btn" data-go="${S.step - 1}">Back</button><button class="btn primary" id="start" ${ps.length || started ? 'disabled' : ''}>Ask Triodian to set up the engagement</button></p>
+    <p class="acts"><button class="btn" data-go="${S.step - 1}">Back</button><button class="btn primary" id="start" ${ps.length || started || S.v.status === 'approved' ? 'disabled' : ''}>Ask Triodian to set up the engagement</button></p>
     ${ps.length ? '<p class="why small" id="whynot">Fix the items above first. Each says what is wrong and where.</p>' : ''}`;
 }
 
@@ -174,5 +176,5 @@ main.addEventListener('click', async ev => {
 
 const [me, v] = await Promise.all([api('GET', '/api/me'), api('GET', '/api/team')]);
 if (!v.ok) main.innerHTML = `<p class="notice" role="alert">${esc(v.body.error || 'The team could not be read.')}</p><p><a class="btn" href="/start/">Back to the questions</a></p>`;
-else { S.v = v.body; S.assign = structuredClone(v.body.team.assign || {}); S.org = (me.ok && me.body.prospect.organisation) || ''; setWho(); S.step = v.body.started ? last() : v.body.runBy ? 0 : WHO; render(); }
+else { S.v = v.body; S.assign = structuredClone(v.body.team.assign || {}); S.org = (me.ok && me.body.prospect.organisation) || ''; setWho(); S.step = v.body.started || v.body.status === 'approved' || v.body.returned ? last() : v.body.runBy ? 0 : WHO; render(); }
 window.TeamApp = { state: () => S };

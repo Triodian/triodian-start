@@ -76,7 +76,21 @@
     var p = S.me.prospect, saved = p.solution && p.solution.engagements && p.solution.engagements.length;
     var a = document.getElementById('team-link');
     if (a) a.classList.toggle('hidden', !saved);
+    var q = document.getElementById('requests-link'); // Triodian administrators: the requests to set up (task 5.6)
+    if (q) q.classList.toggle('hidden', !S.me.isAdmin);
+    if (p.status === 'approved' || p.status === 'provisioned') return '';
     return saved ? ' When you are ready to go ahead, name your team in <a href="/start/team/">Admin</a>.' : '';
+  }
+
+  // Where the request to Triodian stands (task 5.6): asked, being set up, or set up with the apps to open.
+  function standing() {
+    var p = S.me.prospect, apps = (p.provision && p.provision.apps) || [];
+    var names = { 'board-direction': 'AI Board Direction', 'risk-appetite': 'AI Risk Appetite', 'use-assessment': 'AI Use Assessment', confidentiality: 'AI Confidentiality Exposure Assessment' };
+    if (p.status === 'provisioned') return '<section class="mkt" id="standing"><p style="margin:0 0 6px"><strong>Your engagement is set up.</strong> Sign in to each app with ' + esc(p.email) + '; a one-time code is sent to it.</p><ul class="small" id="myapps" style="margin:0">'
+      + apps.map(function (a) { return '<li><a href="' + esc(a.url) + '">' + esc(names[a.id] || a.id) + '</a></li>'; }).join('') + '</ul></section>';
+    if (p.status === 'approved') return '<section class="mkt" id="standing"><p style="margin:0"><strong>Triodian is setting up your engagement.</strong> Everyone on your team gets an email with their roles and links once it is ready.</p></section>';
+    if (p.status === 'team_ready') return '<section class="mkt" id="standing"><p style="margin:0"><strong>Triodian has your request.</strong> You can still change the team in <a href="/start/team/">Admin</a>; a change takes the request back until you ask again.</p></section>';
+    return '';
   }
 
   // Marketing email from Triodian: opt-in, never ticked for the person; saved as soon as it changes.
@@ -107,7 +121,7 @@
       + '<p class="lede">Answer a few questions. Each answer changes what comes next, and the engagements that fit appear below as soon as we know who you are and what kind of organisation it is.</p></div>'
       + (msg === 'off' ? '<p class="notice">Worked examples open from the demo site only.</p>' : '')
       + '<div class="fields"><label>Your name<input id="f-name" value="' + esc(S.name) + '" maxlength="120" autocomplete="name"></label><label>Organisation<input id="f-org" value="' + esc(S.org) + '" maxlength="120" autocomplete="organization"></label></div>'
-      + marketing()
+      + standing() + marketing()
       + '<div class="split"><div class="qs">' + questions() + '</div>' + aside() + '</div>'
       + solution()
       + '<p class="small soft" style="margin-top:22px">Nothing opens in any app until Triodian sets up your engagement with you.' + adminLink() + '</p>';

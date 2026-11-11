@@ -98,3 +98,23 @@ A Triodian administrator downloads the current list for the mailing tool from
 `https://start.triodian.com/api/admin/marketing?format=csv` (signed in). Only people whose latest choice is yes are in
 it. Each email sent needs Triodian's name and a working unsubscribe; the mailing tool provides both. Counsel to confirm
 the wording in `lib/core/api.js` (`MARKETING`).
+
+## 8. Invitations (provisioning, task 5.6)
+
+When a client's apps are set up, a Triodian administrator sends the invitations from **Requests** (`/start/requests/`).
+Start sends them the way the engagement apps send their notices: through the `EMAIL` binding (`send_email` in
+`wrangler.jsonc`), from the address in `NOTIFY_FROM`.
+
+1. Nothing new to create if the engagement apps already send email from this Cloudflare account: Start uses the same
+   sender address, `notifications@triodian.com`.
+2. Deploy both Workers after merging, so they get the binding: `npx wrangler deploy --env test`, then
+   `npx wrangler deploy`.
+3. To hold invitations on a site, set `NOTIFY_SENDING` to `"off"` in its `vars` and deploy. The Requests page then
+   says sending is off and sends nothing.
+
+Who can approve: the administrators in `lib/config.js` (`BOOTSTRAP_ADMINS`) and any added in the `ADMINS` variable,
+comma-separated.
+
+The provisioning itself runs on the administrator's own computer, from the job file, with the practice hub's
+`tools/provision-client.mjs --job`. Start holds no Cloudflare token. See the practice hub's runbook, "From a Start
+request".
