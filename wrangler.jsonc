@@ -19,7 +19,7 @@
   // SIGN_IN_METHODS: the ways to sign in set up on the site, from google, microsoft, github, apple and email, each with its
   // own Access application (docs/setup.md, "More ways to sign in"). Add one only once its Access application exists.
   // Try first (task 5.8) needs the DEMO_SESSION_KEY secret, the same value the engagement apps hold (docs/setup.md).
-  "vars": { "SUITE_DEMO": "on", "ATLAS_URL": "https://obligations-atlas.triodian.com", "ADMINS": "", "SIGN_IN_METHODS": "email" },
+  "vars": { "SUITE_DEMO": "on", "ATLAS_URL": "https://obligations-atlas.triodian.com", "ADMINS": "", "SIGN_IN_METHODS": "google,email" },
   "env": {
     // Test copy with its own database. Deployed with `npx wrangler deploy --env test`. It reads the Atlas test site.
     "test": {
