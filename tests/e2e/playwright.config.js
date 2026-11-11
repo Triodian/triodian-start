@@ -33,6 +33,9 @@ export default defineConfig({
       `--var TRY_BASE_URL:http://localhost:${ATLAS}/apps`,
       // The three ways to sign in, as a site would set them (lib/identity/methods.js).
       '--var SIGN_IN_METHODS:google,github,email',
+      // Invitations (task 5.6): sending is off here, so the browser test shows what the page says then; the server
+      // tests (tests/provision.test.mjs) cover sending.
+      '--var NOTIFY_SENDING:off',
       '--show-interactive-dev-session=false',
     ].join(' '),
     url: `${BASE}/`,

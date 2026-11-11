@@ -16,6 +16,12 @@ const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
 });
 
+/** Emails one invitation (task 5.6), or null while sending is switched off: the same switch and sender as the apps. */
+function emailSender(env) {
+  if (env.NOTIFY_SENDING !== 'on' || !env.EMAIL || !env.NOTIFY_FROM) return null;
+  return m => env.EMAIL.send({ to: m.to, from: { email: env.NOTIFY_FROM, name: 'Triodian' }, subject: m.subject, text: m.text });
+}
+
 let atlasFor = null;
 function atlas(env) {
   if (atlasFor && atlasFor.env === env) return atlasFor.client;
@@ -57,7 +63,8 @@ export default {
       try { body = text ? JSON.parse(text) : undefined; } catch (e) { return json({ error: 'The request is not valid JSON.' }, 400); }
     }
     try {
-      const r = await handle({ method: request.method, path: url.pathname, email: who.email, query: Object.fromEntries(url.searchParams), body, admins: admins(env), tryFirst: tryFirstOn(env) }, d1Store(env.DB), atlas(env));
+      const r = await handle({ method: request.method, path: url.pathname, email: who.email, query: Object.fromEntries(url.searchParams), body, admins: admins(env), tryFirst: tryFirstOn(env), sender: emailSender(env) }, d1Store(env.DB), atlas(env));
+      if (r.download) return new Response(JSON.stringify(r.body, null, 2) + '\n', { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="${r.download}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
       if (r.csv != null) return new Response(r.csv, { status: 200, headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="triodian-start-marketing.csv"', 'Cache-Control': 'no-store' } });
       return json(r.body, r.status);
     } catch (e) {

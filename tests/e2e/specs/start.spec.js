@@ -219,3 +219,73 @@ test('the team stepper fills each engagement, shows a conflict with its reason, 
   expect(errs).toEqual([]);
   await ctx.close();
 });
+
+// Provisioning on completion (task 5.6): a Triodian administrator approves the request, takes the job file to the
+// provisioning script, brings its result back, and the client sees its apps. Sending is off on this test server.
+test('a Triodian administrator approves a request, sets it up from the job file, and the client then sees its apps', async ({ browser }) => {
+  const ADMIN = 'damian.hickey@triodian.com';
+  const client = await ctxFor(browser, 'zed@quay.example');
+  await client.request.put('/api/profile', { data: { name: 'Zed', organisation: 'Quay Logistics', answers: { role: 'directorOrChair', jurisdiction: 'AU', entityType: 'privateCompany', size: 'small' } } });
+  await client.request.put('/api/run-by', { data: { mode: 'self' } });
+  const view = await (await client.request.get('/api/team')).json();
+  const assign = {}; for (const e of view.engagements) for (const r of e.roles.filter(x => x.side === 'client' && x.min > 0)) (assign[e.assessmentType] = assign[e.assessmentType] || {})[r.id] = [{ name: r.name + ' Person', email: `${r.id}.${e.assessmentType.slice(2, 6).toLowerCase()}@quay.example` }];
+  await client.request.put('/api/team', { data: { assign } });
+  expect((await client.request.post('/api/team/start')).status()).toBe(200);
+  const cp = await client.newPage();
+  await cp.goto('/start/');
+  await expect(cp.locator('#standing')).toContainText('Triodian has your request');
+  await expect(cp.locator('#requests-link')).toBeHidden(); // not an administrator
+  expect((await client.request.get('/api/admin/requests')).status()).toBe(403);
+
+  const admin = await ctxFor(browser, ADMIN); const p = await admin.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
+  await p.goto('/start/');
+  await p.click('#requests-link');
+  await expect(p).toHaveURL(/\/start\/requests\/$/);
+  const row = p.locator('#queue tr', { hasText: 'Quay Logistics' });
+  await expect(row).toContainText('Waiting for approval');
+  await expect(row).toContainText('The client’s own people');
+  await row.locator('[data-open]').click();
+  // 1. Approve: a code, the first administrator (the person who asked, when the client runs it itself), the delivery side.
+  await expect(p.locator('#f-admin')).toHaveValue('zed@quay.example');
+  await expect(p.locator('#do-approve')).toBeDisabled();
+  await expect(p.locator('#problems')).toContainText('Give the client a code');
+  await expect(p.locator('#problems')).toContainText('no one is named as Method owner');
+  await p.fill('#f-code', 'quay');
+  const ids = await p.locator('#approve input[data-k="email"]').evaluateAll(els => els.map(e => e.id));
+  for (const [i, id] of ids.entries()) { await p.fill('#' + id.replace(/-e$/, '-n'), 'Delivery ' + (i + 1)); await p.fill('#' + id, `delivery${i + 1}@triodian.com`); }
+  await expect(p.locator('#problems')).toContainText('Every role is filled and every check passes.');
+  await expect(p.locator('#job')).toHaveCount(0); // no job before approval
+  await p.click('#do-approve');
+  await expect(p.locator('#approve .badge')).toContainText('Approved');
+  await expect(p.locator('#f-code')).toBeDisabled();
+  // 2. The job file, and the result that comes back from the provisioning script.
+  await expect(p.locator('#job pre')).toHaveText('node tools/provision-client.mjs --job triodian-job-quay.json');
+  const res = await admin.request.get(await p.locator('#get-job').getAttribute('href'));
+  expect(res.headers()['content-disposition']).toContain('triodian-job-quay.json');
+  const job = await res.json();
+  expect(job).toMatchObject({ format: 'triodian.provisionJob/1', code: 'quay', name: 'Quay Logistics', admin: 'zed@quay.example', apps: 'board-direction,confidentiality' });
+  expect(job.people.find(x => x.email === 'zed@quay.example')).toMatchObject({ admin: true });
+  await cp.goto('/start/');
+  await expect(cp.locator('#standing')).toContainText('Triodian is setting up your engagement');
+  const result = { format: 'triodian.provisionResult/1', requestId: job.requestId, code: 'quay', people: job.people.length, apps: job.apps.split(',').map(id => ({ id, url: `https://${id}.quay.apps.example.com` })) };
+  await p.setInputFiles('#result', { name: 'triodian-job-quay.result.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...result, code: 'someone-else' })) });
+  await expect(p.locator('#toast')).toContainText('another request');
+  await p.setInputFiles('#result', { name: 'triodian-job-quay.result.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(result)) });
+  await expect(p.locator('#apps a')).toHaveCount(2);
+  await expect(p.locator('#apps')).toContainText('board-direction.quay.apps.example.com');
+  // 3. The invitations: one a person, held; with sending off the page says so and sends nothing.
+  await expect(p.locator('#invtable tbody tr')).toHaveCount(job.people.length);
+  await expect(p.locator('#invtable')).toContainText('Held');
+  await expect(p.locator('#sending-off')).toBeVisible();
+  await expect(p.locator('#do-send')).toBeDisabled();
+  expect((await admin.request.post(`/api/admin/requests/${job.requestId}/invitations`, { data: {} })).status()).toBe(503);
+  await p.click('#invites summary');
+  await expect(p.locator('#invites .invite')).toContainText('https://board-direction.quay.apps.example.com');
+  // The client now sees its apps.
+  await cp.goto('/start/');
+  await expect(cp.locator('#standing')).toContainText('Your engagement is set up');
+  await expect(cp.locator('#myapps a')).toHaveCount(2);
+  await expect(cp.locator('#myapps a').first()).toHaveAttribute('href', 'https://board-direction.quay.apps.example.com');
+  expect(errs).toEqual([]);
+  await client.close(); await admin.close();
+});

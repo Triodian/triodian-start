@@ -122,3 +122,9 @@ aside.facts .btn{width:100%;justify-content:center}
 .choice.sub{padding:10px 14px;border-radius:10px}
 @media (max-width:560px){.firms{margin-left:0}}
 .choice .small{font-family:var(--sans)}
+
+/* The requests page (task 5.6): a label, then one or two fields, in line. */
+.arow{display:grid;grid-template-columns:170px minmax(0,1fr) minmax(0,1.2fr);gap:10px;align-items:center;margin:8px 0}
+.arow .in{font:400 15px/1.3 var(--sans);padding:9px 11px;border:1px solid #C3CAD3;border-radius:8px;background:#fff;min-width:0;width:100%}
+.arow .in:disabled{background:var(--grey-bg);color:var(--soft,#5E6874)}
+@media (max-width:700px){.arow{grid-template-columns:minmax(0,1fr)}}

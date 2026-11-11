@@ -17,10 +17,10 @@ not covered by the licence.
 | 5.3 Solution set | Read from the AI Obligations Atlas (`/api/v1/solution-set` and `/solution-set/table`), which routes the matter brief from the same table, so the two always agree. |
 | 5.4 Who runs it | The first step in **Admin** (`/start/team/`): the organisation's own people, a registered practitioner, or Triodian. Practitioners come from the Atlas (`GET /api/v1/firms/directory`): firms approved in the firm registry that asked to be listed, with no person in the list. The choice is kept with the team (`PUT /api/run-by`), the start waits for it, and Triodian makes the introduction when it sets the engagement up (5.6); nothing is sent to the firm before then. |
 | 5.5 Team stepper | `/start/team/`, reached from **Admin** in the header once answers are saved (kept off the questions page, so looking around has no step in the way): a step for each engagement in the solution set, with each role explained, then a check of the whole team. The checks (`public/shared/team.js`, shared by the page and the server) stop a start while a needed role is empty or roles conflict, and say why. Starting hands the team to Triodian; invitations are held until Triodian sets the engagement up. |
+| 5.6 Provisioning on completion | `/start/requests/`, for Triodian administrators (**Requests** in the header). A request appears when an organisation asks to start. The administrator approves it (the client's code, its first administrator, the delivery side's people, checked so no one reviews their own work), downloads the job file, runs `node tools/provision-client.mjs --job …` in [practice-hub](https://github.com/Triodian/practice-hub) on the computer that has the Cloudflare token, uploads the result file, and sends the invitations. Start holds no Cloudflare token and changes nothing in Cloudflare itself. A request can be sent back to the client with the reason. `lib/core/provision.js`. |
 | 5.8 Try first | On the demo site, *Try the worked example* opens an app signed in as the shared demo account (see `lib/identity/try-first.js`). |
 
-Still to come: who runs it (5.4), provisioning on completion (5.6), the journey view (5.7),
-and terms, privacy and pricing (5.9).
+Still to come: the journey view (5.7) and terms, privacy and pricing (5.9).
 
 ## How it fits together
 
