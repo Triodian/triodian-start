@@ -199,7 +199,8 @@ test('the team stepper fills each engagement, shows a conflict with its reason, 
   await expect(p.locator('#started')).toContainText('Triodian has your team');
   expect((await (await ctx.request.get('/api/me')).json()).prospect.status).toBe('team_ready');
   await p.goto('/start/');
-  await expect(p.locator('#team-link')).toHaveText('See your team');
+  await expect(p.locator('#team-link')).toHaveText('Admin');
+  await expect(p.locator('#team')).toHaveCount(0); // no team step on the questions page
   expect(errs).toEqual([]);
   await ctx.close();
 });
