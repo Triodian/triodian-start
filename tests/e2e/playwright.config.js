@@ -31,8 +31,8 @@ export default defineConfig({
       // Try first (task 5.8) on, with a test-only key, and the worked examples sent to the stand-in so no real app is reached.
       '--var SUITE_DEMO:on --var DEMO_SESSION_KEY:test-only-demo-key-0123456789abcdef',
       `--var TRY_BASE_URL:http://localhost:${ATLAS}/apps`,
-      // Three of the five ways to sign in, as a site would set them (lib/identity/methods.js).
-      '--var SIGN_IN_METHODS:google,microsoft,email',
+      // The three ways to sign in, as a site would set them (lib/identity/methods.js).
+      '--var SIGN_IN_METHODS:google,github,email',
       '--show-interactive-dev-session=false',
     ].join(' '),
     url: `${BASE}/`,

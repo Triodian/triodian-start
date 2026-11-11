@@ -12,7 +12,7 @@ not covered by the licence.
 
 | Task | What is built |
 | --- | --- |
-| 5.1 Sign-up | Anyone signs up through Cloudflare Access: with an emailed one-time code, or with Google, a work account, GitHub or Apple where those are set up (`SIGN_IN_METHODS`, docs/setup.md). They choose separately whether to receive marketing email from Triodian (opt-in). The first sign-in adds a *prospect* to this app's own database. Signing up opens nothing in any client's apps: Start is not bound to the suite's identity database, and every engagement route answers `not_provisioned` until a client is set up. |
+| 5.1 Sign-up | Anyone signs up through Cloudflare Access: with an emailed one-time code, or with Google or GitHub where those are set up (`SIGN_IN_METHODS`, docs/setup.md). They choose separately whether to receive marketing email from Triodian (opt-in). The first sign-in adds a *prospect* to this app's own database. Signing up opens nothing in any client's apps: Start is not bound to the suite's identity database, and every engagement route answers `not_provisioned` until a client is set up. |
 | 5.2 Profile questions | Who you are, where, what kind of organisation, how large, what prompted it. Each answer changes what is shown next (the organisation types follow the jurisdiction, the size question explains Lite scope for a regulated organisation, the prompts follow the jurisdiction). |
 | 5.3 Solution set | Read from the AI Obligations Atlas (`/api/v1/solution-set` and `/solution-set/table`), which routes the matter brief from the same table, so the two always agree. |
 | 5.8 Try first | On the demo site, *Try the worked example* opens an app signed in as the shared demo account (see `lib/identity/try-first.js`). |

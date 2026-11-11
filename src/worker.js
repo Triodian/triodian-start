@@ -32,7 +32,7 @@ const OPEN_PAGES = new Set(['/', '/index.html']);
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    // Google, a work account, GitHub or Apple: Access has proven the email on that path; start the session as for email.
+    // Google or GitHub: Access has proven the email on that path; start the session as for email.
     const viaProvider = asEmailSignIn(request, env);
     const auth = await handleAuth(viaProvider || request, env);
     if (auth) return auth;
