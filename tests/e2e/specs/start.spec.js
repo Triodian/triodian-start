@@ -155,10 +155,10 @@ test('the team stepper fills each engagement, shows a conflict with its reason, 
   await expect(p.locator('.team-h')).toHaveText('Who runs it');
   await expect(p.locator('#next')).toBeDisabled();
   await expect(p.locator('#checks')).toContainText('Choose who runs the engagement.');
-  await expect(p.locator('#who .choice')).toHaveCount(3);
+  await expect(p.locator('#who .pick')).toHaveCount(3);
   await p.check('input[name="mode"][value="practitioner"]');
   await expect(p.locator('#next')).toBeDisabled(); // a practitioner, but which one
-  await expect(p.locator('#firms .choice')).toHaveCount(2);
+  await expect(p.locator('#firms .pick')).toHaveCount(2);
   await expect(p.locator('#firms')).toContainText('Board advisor · AU, SG');
   await p.check('input[name="firm"][value="firm-00000000000000b2"]');
   await expect(p.locator('#checks')).toContainText('Nothing to fix here.');
@@ -288,4 +288,21 @@ test('a Triodian administrator approves a request, sets it up from the job file,
   await expect(cp.locator('#myapps a').first()).toHaveAttribute('href', 'https://board-direction.quay.apps.example.com');
   expect(errs).toEqual([]);
   await client.close(); await admin.close();
+});
+
+// The home page's two cards read top to bottom. (A style added for another page once shared their class name and laid
+// each card's parts out side by side.)
+test('the home page\'s two ways in are laid out as cards, each read top to bottom', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } }); const p = await ctx.newPage();
+  await p.goto('/');
+  const cards = p.locator('.choices > .choice');
+  await expect(cards).toHaveCount(2);
+  for (const i of [0, 1]) {
+    const card = cards.nth(i);
+    expect(await card.evaluate(el => getComputedStyle(el).display)).toBe('block');
+    const h = await card.locator('h2').boundingBox(), no = await card.locator('.choice-no').boundingBox(), box = await card.boundingBox();
+    expect(h.y).toBeGreaterThanOrEqual(no.y + no.height - 1); // the heading sits under the label, not beside it
+    expect(h.width).toBeGreaterThan(box.width * 0.6);          // and runs across the card
+  }
+  await ctx.close();
 });

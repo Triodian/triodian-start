@@ -64,12 +64,12 @@ function stepEngagement(e) {
 // Who runs it (task 5.4): the organisation's own people, a registered practitioner from the Atlas directory, or Triodian.
 function stepWho() {
   const dir = S.v.practitioners || { available: false, items: [] }, w = S.who;
-  const firm = f => `<label class="choice sub${w.firmID === f.firmID ? ' on' : ''}"><input type="radio" name="firm" value="${esc(f.firmID)}"${w.firmID === f.firmID ? ' checked' : ''}><span><strong>${esc(f.firm)}</strong>
+  const firm = f => `<label class="pick sub${w.firmID === f.firmID ? ' on' : ''}"><input type="radio" name="firm" value="${esc(f.firmID)}"${w.firmID === f.firmID ? ' checked' : ''}><span><strong>${esc(f.firm)}</strong>
       <span class="small soft">${esc([f.roles.join(', '), f.jurisdictions.join(', ')].filter(Boolean).join(' · ') || 'Registered practitioner')}</span></span></label>`;
   const firms = dir.items.length ? `<div class="firms" id="firms" role="radiogroup" aria-label="Registered practitioners">${dir.items.map(firm).join('')}
       <p class="small soft" style="margin:0">These firms are registered with Triodian and asked to be listed. Triodian does not pass your details to a firm until it sets the engagement up with you.</p></div>`
     : `<p class="small soft firms" id="nofirms">${dir.available === false ? 'The list of registered practitioners could not be read just now. Try again shortly, or choose another way.' : 'No registered practitioner is listed yet. Choose another way, or ask Triodian to suggest one.'}</p>`;
-  const opt = o => `<label class="choice${w.mode === o.id ? ' on' : ''}"><input type="radio" name="mode" value="${o.id}"${w.mode === o.id ? ' checked' : ''}><span><strong>${esc(o.name)}</strong><span class="small soft">${esc(o.explain)}</span></span></label>
+  const opt = o => `<label class="pick${w.mode === o.id ? ' on' : ''}"><input type="radio" name="mode" value="${o.id}"${w.mode === o.id ? ' checked' : ''}><span><strong>${esc(o.name)}</strong><span class="small soft">${esc(o.explain)}</span></span></label>
       ${o.id === 'practitioner' && w.mode === 'practitioner' ? firms : ''}`;
   const ready = w.mode && (w.mode !== 'practitioner' || w.firmID);
   return `<div class="split"><div><h2 class="team-h">Who runs it</h2>
