@@ -81,7 +81,7 @@ test('each answer changes what is shown next, and the solution set follows the A
 test('nothing else is reachable until provisioned, and a prospect cannot see other sign-ups', async ({ browser }) => {
   const ctx = await ctxFor(browser, 'ben@harrow.example'), r = ctx.request;
   expect((await (await r.get('/api/me')).json()).prospect.status).toBe('prospect');
-  for (const path of ['/api/team', '/api/journey']) {
+  for (const path of ['/api/journey', '/api/engagement/x']) {
     const res = await r.get(path); expect(res.status()).toBe(403); expect((await res.json()).code).toBe('not_provisioned');
   }
   expect((await r.get('/api/admin/prospects')).status()).toBe(403);
@@ -140,5 +140,66 @@ test('marketing email is opt-in: unticked to start, saved when ticked, and the p
   await expect(p.locator('#mkt')).toBeChecked();
   await p.locator('#mkt').uncheck();
   await expect(p.locator('#mkt-note')).toContainText('not on Triodian’s mailing list');
+  await ctx.close();
+});
+
+// The team stepper (task 5.5): a step for each engagement, live checks, and no start while a role conflicts.
+test('the team stepper fills each engagement, shows a conflict with its reason, and starts only once it is fixed', async ({ browser }) => {
+  const ctx = await ctxFor(browser, 'tess@harbour.example'); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
+  expect((await ctx.request.get('/api/team')).status()).toBe(409); // no saved answers yet
+  await ctx.request.put('/api/profile', { data: { name: 'Tess', organisation: 'Harbour Foods', answers: { role: 'inHouseGC', jurisdiction: 'AU', entityType: 'privateCompany', size: 'small', prompt: 'deal' } } });
+  await p.goto('/start/');
+  await p.click('#team-link');
+  await expect(p).toHaveURL(/\/start\/team\/$/);
+  // Step 1: AI Board Direction, standalone: no CRO role
+  await expect(p.locator('.team-h')).toContainText('AI Board Direction');
+  await expect(p.locator('.team-h')).toContainText('Standalone mode');
+  await expect(p.locator('[data-role="cro"]')).toHaveCount(0);
+  await expect(p.locator('#checks')).toContainText('no one is named as Chair');
+  const fill = async (role, i, name, email) => { await p.fill(`#in-${role}-${i}-n`, name); await p.fill(`#in-${role}-${i}-e`, email); };
+  await fill('aiBoardDirection-chair', 0, 'Cy Chair', 'cy@harbour.example');
+  await expect(p.locator('#checks')).not.toContainText('Chair');
+  await fill('aiBoardDirection-director', 0, 'Di One', 'di@harbour.example');
+  await p.locator('[data-role="director"] [data-add]').click();
+  await fill('aiBoardDirection-director', 1, 'Dov Two', 'dov@harbour.example');
+  await fill('aiBoardDirection-ceo', 0, 'Cleo', 'cleo@harbour.example');
+  await fill('aiBoardDirection-gc', 0, 'Tess', 'tess@harbour.example');
+  await expect(p.locator('#checks')).toContainText('Nothing to fix here.');
+  await expect(p.locator('.role.tri')).toContainText('Recorder');
+  await p.click('#next');
+  // Step 2: the confidentiality assessment. The GC is also counsel, and the checker is also the matter lead: two conflicts.
+  await expect(p.locator('.team-h')).toContainText('AI Confidentiality Exposure Assessment');
+  await fill('aiConfidentialityExposureAssessment-counsel', 0, 'Tess', 'tess@harbour.example');
+  await p.fill('#in-aiConfidentialityExposureAssessment-gc-0-e', 'tess@harbour.example');
+  await expect(p.locator('#in-aiConfidentialityExposureAssessment-gc-0-n')).toHaveValue('Tess'); // someone already named
+  await fill('aiConfidentialityExposureAssessment-dealLead', 0, 'Milo', 'milo@harbour.example');
+  await fill('aiConfidentialityExposureAssessment-tenantOwner', 0, 'Tia', 'tia@harbour.example');
+  await fill('aiConfidentialityExposureAssessment-checker', 0, 'Milo', 'milo@harbour.example');
+  await expect(p.locator('#checks')).toContainText('Tess is both the GC and counsel. Two people agree the matter profile, so name a second approver');
+  await expect(p.locator('#checks')).toContainText('Milo is the independent checker and also Matter team lead');
+  await p.click('#next');
+  // Last step: it cannot start, and says why
+  await expect(p.locator('.team-h')).toHaveText('Check and start');
+  await expect(p.locator('#start')).toBeDisabled();
+  await expect(p.locator('#blockers')).toContainText('The engagement cannot start yet');
+  await expect(p.locator('#blockers')).toContainText('The reviewer holds no other role, so the check stays independent.');
+  const refused = await ctx.request.post('/api/team/start');
+  expect(refused.status()).toBe(409); expect((await refused.json()).code).toBe('team_not_ready'); // the server refuses too
+  // Fix both and start
+  await p.locator('#blockers .lnk').first().click();
+  await fill('aiConfidentialityExposureAssessment-executive', 0, 'Cleo', 'cleo@harbour.example');
+  await fill('aiConfidentialityExposureAssessment-checker', 0, 'Chen Checker', 'chen@checkers.example');
+  await expect(p.locator('#checks')).toContainText('Nothing to fix here.');
+  await p.click('#next');
+  await expect(p.locator('#ready')).toBeVisible();
+  await expect(p.locator('.ptable tbody tr')).toHaveCount(8);
+  await expect(p.locator('.ptable')).toContainText('AI Board Direction: General counsel');
+  await expect(p.locator('.invite')).toBeHidden();
+  await p.click('#start');
+  await expect(p.locator('#started')).toContainText('Triodian has your team');
+  expect((await (await ctx.request.get('/api/me')).json()).prospect.status).toBe('team_ready');
+  await p.goto('/start/');
+  await expect(p.locator('#team-link')).toHaveText('See your team');
+  expect(errs).toEqual([]);
   await ctx.close();
 });
