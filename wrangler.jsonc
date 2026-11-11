@@ -16,7 +16,7 @@
   "observability": { "enabled": true },
   // ATLAS_URL: the Atlas that serves the routing table and the solution set (task 5.3). An ATLAS service binding to the
   // Atlas Worker may be added instead; the app uses it when present. ADMINS: more Triodian administrators, comma-separated.
-  // SIGN_IN_METHODS: the ways to sign in set up on the site, from google, microsoft, github, apple and email, each with its
+  // SIGN_IN_METHODS: the ways to sign in set up on the site, from google, github and email, each with its
   // own Access application (docs/setup.md, "More ways to sign in"). Add one only once its Access application exists.
   // Try first (task 5.8) needs the DEMO_SESSION_KEY secret, the same value the engagement apps hold (docs/setup.md).
   "vars": { "SUITE_DEMO": "on", "ATLAS_URL": "https://obligations-atlas.triodian.com", "ADMINS": "", "SIGN_IN_METHODS": "google,github,email" },

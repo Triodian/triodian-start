@@ -110,7 +110,7 @@ test('the home page offers the ways to sign in set up on the site, each straight
   await expect(b).toHaveCount(3);
   await expect(b.nth(0)).toHaveText('Continue with Google');
   await expect(b.nth(0)).toHaveAttribute('href', '/auth/google?next=%2Fstart%2F');
-  await expect(b.nth(1)).toHaveText('Continue with a work account (Microsoft)');
+  await expect(b.nth(1)).toHaveText('Continue with GitHub');
   await expect(b.nth(2)).toHaveText('Email me a one-time code');
   // The shared sign-in code sends people to /login; Start sends them home with the same message and destination.
   const l = await request.get('/login?out=1', { maxRedirects: 0 });
@@ -122,7 +122,7 @@ test('the home page offers the ways to sign in set up on the site, each straight
   expect(g.status()).toBe(303);
   expect(g.headers()['location']).toBe('/start/');
   expect(g.headers()['set-cookie']).toMatch(/^tri_session=/);
-  expect((await request.get('/auth/github', { maxRedirects: 0 })).status()).toBe(404); // not set up on this site
+  expect((await request.get('/auth/apple', { maxRedirects: 0 })).status()).toBe(404); // not a way to sign in
 });
 
 test('marketing email is opt-in: unticked to start, saved when ticked, and the person can untick it', async ({ browser }) => {

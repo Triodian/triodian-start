@@ -80,15 +80,13 @@ For each way you add, on each site:
    method** selected, **Apply instant authentication** on, and a policy of Allow, Include **Everyone**.
 3. **Add its AUD tag to `ACCESS_AUD`**, which holds every application's tag for the site, separated by commas:
    `npx wrangler secret put ACCESS_AUD --env test`, then paste `<email tag>,<google tag>,…`.
-4. **Add the way to `SIGN_IN_METHODS`** for that site in `wrangler.jsonc`, for example `"google,microsoft,email"`, and
+4. **Add the way to `SIGN_IN_METHODS`** for that site in `wrangler.jsonc`, for example `"google,github,email"`, and
    redeploy.
 
 | Way | Path | Login method in Cloudflare | Notes |
 | --- | --- | --- | --- |
 | Google | `/auth/google` | Google | Any Google account. Needs an OAuth client in Google Cloud. |
 | GitHub | `/auth/github` | GitHub | Needs an OAuth app in GitHub. |
-| Work account | `/auth/microsoft` | Microsoft Entra ID | Cloudflare's Entra ID login method is set up for **one directory** (it asks for the Directory (tenant) ID), so it signs in people from that organisation only, such as a client's staff. Signing in "any work account" would need a multi-tenant set-up through Generic OIDC, which is not confirmed to work. Others use the email code. |
-| Apple | `/auth/apple` | Generic OIDC | Cloudflare has no Apple login method of its own. Sign in with Apple through Generic OIDC is not confirmed: Apple's client secret is a signed token that expires within six months, and people may share a private relay address instead of their own. Test it on the test site first. |
 | Email code | `/auth/email` | One-time PIN | Always available; keep it as the fallback. |
 
 ## 7. Marketing email
