@@ -1,8 +1,13 @@
-// A stand-in Atlas for the tests: the two endpoints Triodian Start reads, answered by the Atlas's own core (copied by
+// A stand-in Atlas for the tests: the endpoints Triodian Start reads, answered by the Atlas's own core (copied by
 // tools/sync-atlas.mjs), the same way src/api/app.js in obligations-atlas answers them.
 import http from 'node:http';
 import { ENTITY_TYPES, JURISDICTIONS, REGULATED_SECTORS, GENERAL_ENTITY_TYPES } from './atlas.js';
 import { ROUTING_TABLE, solutionSet } from './solution-set.js';
+
+export const PRACTITIONERS = [
+  { firmID: 'firm-00000000000000a1', firm: 'Askew Lane Partners', roles: ['Fractional GC'], jurisdictions: ['AU'] },
+  { firmID: 'firm-00000000000000b2', firm: 'Kestrel Board Advisory', roles: ['Board advisor'], jurisdictions: ['AU', 'SG'] },
+];
 
 export function table() {
   return { ...ROUTING_TABLE,
@@ -20,6 +25,8 @@ export function answer(pathAndQuery, origin = 'https://obligations-atlas.triodia
     const r = solutionSet({ role: q.role, entityTypes: list('entityType'), sectors: list('sector'), jurisdiction: (q.jurisdiction || '').toUpperCase() || undefined, size: q.size, prompt: q.prompt }, { atlasUrl: origin });
     return r.error ? { status: 400, body: { title: r.error, code: 'query.solutionSet' } } : { status: 200, body: r };
   }
+  // The practitioner directory (task 5.4), as GET /api/v1/firms/directory answers it. The firms are made up.
+  if (u.pathname === '/api/v1/firms/directory') return { status: 200, body: { format: 'triodian.practitionerDirectory/1', available: true, items: PRACTITIONERS } };
   return { status: 404, body: { title: 'No such path' } };
 }
 /** A fetch() for the app's Atlas client. */

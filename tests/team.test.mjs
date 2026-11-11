@@ -1,8 +1,8 @@
 // The team and its separation-of-duty checks (development plan task 5.5). Run: node tests/team.test.mjs
-import { ROLES, rolesFor, checkTeam, normaliseTeam, invitations, progress } from '../public/shared/team.js';
+import { ROLES, rolesFor, checkTeam, normaliseTeam, invitations, progress, RUN_BY, normaliseRunBy, checkRunBy } from '../public/shared/team.js';
 import { handle, atlasClient } from '../lib/core/api.js';
 import { memoryStore } from '../lib/store/d1.js';
-import { stubFetch } from './atlas/stub.mjs';
+import { stubFetch, PRACTITIONERS } from './atlas/stub.mjs';
 
 let fails = 0; const ok = (label, cond, extra) => { if (!cond) fails++; console.log((cond ? 'PASS' : 'FAIL') + ' · ' + label + (extra && !cond ? ' → ' + extra : '')); };
 // Each app's own role ids (its public/shared/rules.js or lib/core/roles.js), so the stepper names real roles.
@@ -79,6 +79,23 @@ ok('the team waits for saved answers', r.status === 409 && r.body.code === 'no_s
 await call('PUT', '/api/profile', 'ana@coastline.example', { name: 'Ana', organisation: 'Coastline Super', answers: { role: 'croOrRisk', jurisdiction: 'AU', sector: 'AU-SUPERANNUATION', size: 'medium' } });
 r = await call('GET', '/api/team', 'ana@coastline.example');
 ok('then lists the engagements and their roles', r.status === 200 && r.body.engagements.map(e => e.assessmentType).join() === 'aiBoardDirection,aiRiskAppetite,aiUseAssessment' && r.body.engagements[0].mode === 'connected' && !r.body.canStart);
+// Who runs it (task 5.4)
+ok('who runs it: three choices, each explained, in plain words', RUN_BY.map(o => o.id).join() === 'self,practitioner,triodian' && RUN_BY.every(o => o.name && o.explain) && !/\b(must|required)\b/i.test(JSON.stringify(RUN_BY)));
+const DIR = { available: true, items: PRACTITIONERS };
+ok('no choice stops a start', checkRunBy({ assign: {} }, DIR)[0].code === 'runBy' && checkRunBy(null, DIR).length === 1);
+ok('your own people, or Triodian, need nothing more', !checkRunBy({ runBy: { mode: 'self' } }, DIR).length && !checkRunBy({ runBy: { mode: 'triodian' } }, DIR).length);
+ok('a practitioner comes from the directory, and the firm’s name is taken from it', normaliseRunBy({ mode: 'practitioner', firmID: PRACTITIONERS[1].firmID, firm: 'Someone Else' }, DIR).runBy.firm === 'Kestrel Board Advisory'
+  && /from the list/.test(normaliseRunBy({ mode: 'practitioner', firmID: 'firm-unknown' }, DIR).error) && /from the list/.test(normaliseRunBy({ mode: 'practitioner' }, DIR).error) && /Choose who runs/.test(normaliseRunBy({ mode: 'anyone' }, DIR).error));
+ok('a practitioner no longer listed stops a start, with the reason', checkRunBy({ runBy: { mode: 'practitioner', firmID: 'firm-gone', firm: 'Gone & Co' } }, DIR)[0].reason === 'Gone & Co is no longer listed as a practitioner. Choose again.');
+ok('but not while the directory cannot be read', !checkRunBy({ runBy: { mode: 'practitioner', firmID: 'firm-gone', firm: 'Gone & Co' } }, { available: false, items: [] }).length
+  && /could not be read/.test(normaliseRunBy({ mode: 'practitioner', firmID: 'firm-gone' }, { available: false, items: [] }).error));
+ok('the team view offers the choices and the registered practitioners, with no person in them', r.body.runBy === null && r.body.runByOptions.length === 3 && r.body.practitioners.available && r.body.practitioners.items.map(f => f.firm).join() === 'Askew Lane Partners,Kestrel Board Advisory' && !/@/.test(JSON.stringify(r.body.practitioners)));
+r = await call('POST', '/api/team/start', 'ana@coastline.example');
+ok('an engagement cannot start until someone is chosen to run it', r.status === 409 && /cannot start yet: Choose who runs the engagement\./.test(r.body.error) && r.body.problems.length === 15 && r.body.problems[0].engagement === null);
+r = await call('PUT', '/api/run-by', 'ana@coastline.example', { mode: 'practitioner', firmID: 'firm-unknown' });
+ok('the API takes only a listed practitioner', r.status === 400);
+r = await call('PUT', '/api/run-by', 'ana@coastline.example', { mode: 'practitioner', firmID: PRACTITIONERS[1].firmID });
+ok('a self-serve director can choose a registered practitioner', r.status === 200 && r.body.runBy.mode === 'practitioner' && r.body.runBy.firm === 'Kestrel Board Advisory' && r.body.runBy.chosenAt && store._audit.some(x => x.action === 'team.runBy' && x.detail.firm === 'Kestrel Board Advisory'));
 r = await call('POST', '/api/team/start', 'ana@coastline.example');
 ok('an engagement cannot start with roles unfilled; the reason is given', r.status === 409 && r.body.code === 'team_not_ready' && /cannot start yet: AI Board Direction: no one is named as Chair/.test(r.body.error) && r.body.problems.length === 14);
 const conflict = good(); conflict.assign.aiRiskAppetite.independent = [P('Ana', 'ana@coastline.example')];
@@ -87,12 +104,17 @@ ok('a team with a conflict saves as a draft', r.status === 200 && !r.body.canSta
 r = await call('POST', '/api/team/start', 'ana@coastline.example');
 ok('but an engagement cannot start with a role conflict; the reason is shown', r.status === 409 && /Ana is the independent reviewer and also CRO/.test(r.body.error) && (await store.prospectByEmail('ana@coastline.example')).status === 'prospect');
 r = await call('PUT', '/api/team', 'ana@coastline.example', good());
-ok('fixed, it can start', r.status === 200 && r.body.canStart && r.body.invitations.length === 10);
+ok('fixed, it can start; saving the team keeps the choice of who runs it', r.status === 200 && r.body.canStart && r.body.invitations.length === 10 && r.body.runBy.firm === 'Kestrel Board Advisory');
 r = await call('POST', '/api/team/start', 'ana@coastline.example');
 ok('starting hands the team to Triodian, with invitations held', r.status === 200 && r.body.started && (await store.prospectByEmail('ana@coastline.example')).status === 'team_ready' && r.body.invitations.every(x => x.status === 'held') && store._audit.some(x => x.action === 'team.start'));
 r = await call('PUT', '/api/team', 'ana@coastline.example', conflict);
 ok('a change after asking takes the request back', r.status === 200 && r.body.withdrew && !r.body.started && (await store.prospectByEmail('ana@coastline.example')).status === 'prospect');
 await call('PUT', '/api/team', 'ana@coastline.example', good()); await call('POST', '/api/team/start', 'ana@coastline.example');
+r = await call('PUT', '/api/run-by', 'ana@coastline.example', { mode: 'triodian' });
+ok('so does a change of who runs it; the team is kept', r.status === 200 && r.body.withdrew && !r.body.started && r.body.runBy.mode === 'triodian' && !r.body.runBy.firm && r.body.canStart && r.body.invitations.length === 10);
+r = await handle({ method: 'PUT', path: '/api/run-by', email: 'ana@coastline.example', body: { mode: 'practitioner', firmID: PRACTITIONERS[0].firmID }, admins: [] }, store, atlasClient(async () => { throw new Error('down'); }, 'https://atlas.invalid'));
+ok('with the Atlas down a practitioner cannot be chosen, and the reason is given', r.status === 400 && /could not be read/.test(r.body.error));
+await call('POST', '/api/team/start', 'ana@coastline.example');
 await call('PUT', '/api/profile', 'ana@coastline.example', { name: 'Ana', organisation: 'Coastline Super', answers: { role: 'croOrRisk', jurisdiction: 'AU', entityType: 'privateCompany' } });
 ok('so does a change of answers that changes the engagements', (await store.prospectByEmail('ana@coastline.example')).status === 'prospect');
 r = await call('PUT', '/api/team', 'ana@coastline.example', { assign: { aiUseAssessment: { assessor: [P('X', 'x@x.example')] } } });

@@ -173,3 +173,41 @@ export function progress(engagement, team) {
   const need = rolesFor(engagement).filter(r => r.side === 'client' && r.min > 0);
   return { filled: need.filter(r => people(team, engagement.assessmentType, r.id).length >= r.min).length, of: need.length };
 }
+
+// ---- who runs it (development plan task 5.4). One choice for the organisation's engagements: its own people, a
+//      registered practitioner (a firm approved in the Atlas firm registry that asked to be listed), or Triodian.
+//      Triodian fills its own roles in every case; the choice is who leads the work with the client.
+export const RUN_BY = [
+  { id: 'self', name: 'We run it ourselves', explain: 'Your own people lead the work, using the guide in each app. Triodian sets the engagement up and fills only the roles marked “Filled by Triodian”.' },
+  { id: 'practitioner', name: 'With a registered practitioner', explain: 'A firm registered with Triodian, such as a fractional GC or a board advisor, leads the work with you. Triodian introduces you to the firm when it sets the engagement up; your details are not passed on before then.' },
+  { id: 'triodian', name: 'With Triodian', explain: 'Triodian leads the work with you.' },
+];
+
+/**
+ * The choice in the form it is kept. `directory` is the practitioner directory, { available, items: [{ firmID, firm,
+ * roles, jurisdictions }] }. Returns { runBy } or { error }.
+ */
+export function normaliseRunBy(input, directory) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return { error: 'The choice is not in the expected form.' };
+  if (!RUN_BY.some(o => o.id === input.mode)) return { error: 'Choose who runs the engagement: your own people, a registered practitioner, or Triodian.' };
+  if (input.mode !== 'practitioner') return { runBy: { mode: input.mode } };
+  const items = (directory && directory.items) || [];
+  const f = items.find(x => x.firmID === input.firmID);
+  if (!f) return { error: directory && directory.available === false && !items.length ? 'The list of registered practitioners could not be read. Try again shortly.' : 'Choose a practitioner from the list.' };
+  return { runBy: { mode: 'practitioner', firmID: f.firmID, firm: f.firm } };
+}
+
+/**
+ * What stops a start because of the choice: none made, or a practitioner that is no longer listed (checked only when
+ * the directory could be read). Problems carry engagement: null, since the choice covers every engagement.
+ */
+export function checkRunBy(team, directory) {
+  const rb = team && team.runBy;
+  if (!rb || !RUN_BY.some(o => o.id === rb.mode)) return [{ code: 'runBy', engagement: null, reason: 'Choose who runs the engagement.' }];
+  if (rb.mode === 'practitioner') {
+    if (!rb.firmID) return [{ code: 'runBy', engagement: null, reason: 'Choose a registered practitioner.' }];
+    if (directory && directory.available !== false && !(directory.items || []).some(x => x.firmID === rb.firmID))
+      return [{ code: 'runByGone', engagement: null, reason: `${rb.firm || 'The practitioner you chose'} is no longer listed as a practitioner. Choose again.` }];
+  }
+  return [];
+}
