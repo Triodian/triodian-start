@@ -70,6 +70,14 @@
     return h + '</section>';
   }
 
+  // The next step once the answers are saved: form the team (task 5.5).
+  function team() {
+    var p = S.me.prospect, saved = p.solution && p.solution.engagements && p.solution.engagements.length;
+    if (!S.sol) return '';
+    return '<section class="mkt" id="team" style="margin-top:18px;max-width:980px"><strong>Next: form your team.</strong> <span class="small soft">Name who fills each role in these engagements. The engagement starts only when every needed role is filled and no roles conflict.</span>'
+      + '<p style="margin:10px 0 0">' + (saved ? '<a class="btn primary" id="team-link" href="/start/team/">' + (p.status === 'team_ready' ? 'See your team' : p.team ? 'Continue your team' : 'Form your team') + '</a>' : '<span class="small soft" id="team-wait">Save your answers first.</span>') + '</p></section>';
+  }
+
   // Marketing email from Triodian: opt-in, never ticked for the person; saved as soon as it changes.
   function marketing() {
     var m = S.me.prospect.marketing, on = !!(m && m.consent);
@@ -101,7 +109,8 @@
       + marketing()
       + '<div class="split"><div class="qs">' + questions() + '</div>' + aside() + '</div>'
       + solution()
-      + '<p class="small soft" style="margin-top:22px">Nothing else opens until Triodian sets up your engagement with you: forming the team, the invitations and the journey come next.</p>';
+      + team()
+      + '<p class="small soft" style="margin-top:22px">Nothing opens in any app until Triodian sets up your engagement with you.</p>';
     window.scrollTo(0, keep);
   }
 

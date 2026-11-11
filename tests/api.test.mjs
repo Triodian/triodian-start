@@ -19,7 +19,7 @@ ok('the sign-up is in the audit log', store._audit.some(x => x.action === 'prosp
 r = await call('GET', '/api/me', 'ana@coastline.example');
 ok('signing in again keeps the same prospect', (await store.listProspects()).length === 1);
 
-for (const p of ['/api/team', '/api/journey', '/api/engagement/x']) {
+for (const p of ['/api/journey', '/api/engagement/x']) {
   r = await call('GET', p, 'ana@coastline.example');
   ok(`nothing else is reachable until provisioned: ${p}`, r.status === 403 && r.body.code === 'not_provisioned');
 }
