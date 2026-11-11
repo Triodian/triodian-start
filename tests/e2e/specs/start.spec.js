@@ -143,7 +143,7 @@ test('marketing email is opt-in: unticked to start, saved when ticked, and the p
   await ctx.close();
 });
 
-// The team stepper (task 5.5): a step for each engagement, live checks, and no start while a role conflicts.
+// The team stepper (tasks 5.4 and 5.5): who runs it, a step for each engagement, live checks, and no start while a role conflicts.
 test('the team stepper fills each engagement, shows a conflict with its reason, and starts only once it is fixed', async ({ browser }) => {
   const ctx = await ctxFor(browser, 'tess@harbour.example'); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   expect((await ctx.request.get('/api/team')).status()).toBe(409); // no saved answers yet
@@ -151,6 +151,20 @@ test('the team stepper fills each engagement, shows a conflict with its reason, 
   await p.goto('/start/');
   await p.click('#team-link');
   await expect(p).toHaveURL(/\/start\/team\/$/);
+  // First: who runs it (task 5.4). Someone serving themselves can choose a registered practitioner from the Atlas directory.
+  await expect(p.locator('.team-h')).toHaveText('Who runs it');
+  await expect(p.locator('#next')).toBeDisabled();
+  await expect(p.locator('#checks')).toContainText('Choose who runs the engagement.');
+  await expect(p.locator('#who .choice')).toHaveCount(3);
+  await p.check('input[name="mode"][value="practitioner"]');
+  await expect(p.locator('#next')).toBeDisabled(); // a practitioner, but which one
+  await expect(p.locator('#firms .choice')).toHaveCount(2);
+  await expect(p.locator('#firms')).toContainText('Board advisor · AU, SG');
+  await p.check('input[name="firm"][value="firm-00000000000000b2"]');
+  await expect(p.locator('#checks')).toContainText('Nothing to fix here.');
+  await p.click('#next');
+  expect((await (await ctx.request.get('/api/me')).json()).prospect.team.runBy).toMatchObject({ mode: 'practitioner', firm: 'Kestrel Board Advisory' });
+  await expect(p.locator('#nav')).toContainText('With Kestrel Board Advisory');
   // Step 1: AI Board Direction, standalone: no CRO role
   await expect(p.locator('.team-h')).toContainText('AI Board Direction');
   await expect(p.locator('.team-h')).toContainText('Standalone mode');
@@ -194,6 +208,7 @@ test('the team stepper fills each engagement, shows a conflict with its reason, 
   await expect(p.locator('#ready')).toBeVisible();
   await expect(p.locator('.ptable tbody tr')).toHaveCount(8);
   await expect(p.locator('.ptable')).toContainText('AI Board Direction: General counsel');
+  await expect(p.locator('#runby')).toContainText('With Kestrel Board Advisory');
   await expect(p.locator('.invite')).toBeHidden();
   await p.click('#start');
   await expect(p.locator('#started')).toContainText('Triodian has your team');
