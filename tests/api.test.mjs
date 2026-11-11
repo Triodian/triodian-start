@@ -78,7 +78,7 @@ ok('both choices are in the audit log', store._audit.some(x => x.action === 'mar
 
 // Ways to sign in (task 5.1)
 ok('email alone when none are listed', methodsOn({}).map(m => m.id).join() === 'email');
-ok('the listed methods, in button order', methodsOn({ SIGN_IN_METHODS: 'email, Apple,google,microsoft,github,myspace' }).map(m => m.id).join() === 'google,microsoft,github,apple,email');
+ok('the listed methods, in button order', methodsOn({ SIGN_IN_METHODS: 'email, GitHub,google,apple,microsoft' }).map(m => m.id).join() === 'google,github,email');
 const via = asEmailSignIn(new Request('https://start.triodian.com/auth/google?next=%2Fstart%2F', { headers: { 'Cf-Access-Jwt-Assertion': 'x.y.z' } }), { SIGN_IN_METHODS: 'google,email' });
 ok('a provider path is handed to the email sign-in, keeping the Access token and next', via && new URL(via.url).pathname === '/auth/email' && new URL(via.url).searchParams.get('next') === '/start/' && via.headers.get('Cf-Access-Jwt-Assertion') === 'x.y.z');
 ok('a method not set up on the site is not', asEmailSignIn(new Request('https://start.triodian.com/auth/github'), { SIGN_IN_METHODS: 'google,email' }) === null);
