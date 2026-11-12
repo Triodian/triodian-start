@@ -21,7 +21,20 @@
   if (q.get('email') === '0') document.getElementById('m-email').hidden = false;
   if (q.has('out')) document.getElementById('m-out').hidden = false;
   // Try first needs the demo key on this site; without it, say so instead of offering buttons that can't work.
-  var off = function () { document.getElementById('trylist').hidden = true; document.getElementById('tryoff').hidden = false; };
+  var isOff = false, list = document.getElementById('trylist'), sectors = document.getElementById('sectors');
+  var off = function () { isOff = true; list.hidden = true; sectors.hidden = true; document.getElementById('sectornote').hidden = true; document.getElementById('tryoff').hidden = false; };
+  // The visitor chooses the kind of organisation first. The apps that have a worked example for it are then listed, and
+  // each link carries the choice (example=<sector>) so the app opens on that example. Same sector ids in every app.
+  sectors.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-sector]'); if (!b || isOff) return;
+    var sec = b.getAttribute('data-sector');
+    Array.prototype.forEach.call(sectors.querySelectorAll('[data-sector]'), function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    Array.prototype.forEach.call(list.querySelectorAll('a.trybtn'), function (a) {
+      a.hidden = a.getAttribute('data-sectors').split(' ').indexOf(sec) < 0;
+      a.href = '/auth/try?app=' + encodeURIComponent(a.getAttribute('data-app')) + '&example=' + encodeURIComponent(sec);
+    });
+    list.hidden = false;
+  });
   if (q.get('try') === 'off') off();
   fetch('/auth/try-status', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (j) { if (!j.on) off(); }).catch(function () {});
 })();

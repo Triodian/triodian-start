@@ -31,12 +31,18 @@
     <section class="choice" aria-labelledby="c2">
       <p class="choice-no"><span class="stepno">2</span> No sign-up</p>
       <h2 id="c2">Try a worked example first</h2>
-      <p>Each app opens on a worked example with fictional companies. Nothing you do there is saved.</p>
-      <div class="trylist" id="trylist">
-        <a class="btn trybtn" href="/auth/try?app=aiBoardDirection"><strong>AI Board Direction</strong><span>The board's directions on AI: where to use it and what to rule out</span></a>
-        <a class="btn trybtn" href="/auth/try?app=aiRiskAppetite"><strong>AI Risk Appetite</strong><span>How much authority AI may hold, and the triggers that act on it</span></a>
-        <a class="btn trybtn" href="/auth/try?app=aiUseAssessment"><strong>AI Use Assessment</strong><span>Whether each AI use, including in the supply chain, fits the appetite</span></a>
-        <a class="btn trybtn" href="/auth/try?app=aiConfidentialityExposureAssessment"><strong>AI Confidentiality Exposure Assessment</strong><span>Where matter information can reach an external AI model</span></a>
+      <p>Choose the kind of organisation. Each app then opens on a worked example for it, with fictional companies. Nothing you do there is saved.</p>
+      <div class="sectors" id="sectors" role="group" aria-label="Kind of organisation">
+        <button type="button" class="btn sm sectorbtn" data-sector="superannuation" aria-pressed="false">Superannuation fund</button>
+        <button type="button" class="btn sm sectorbtn" data-sector="insurance" aria-pressed="false">Insurer</button>
+        <button type="button" class="btn sm sectorbtn" data-sector="unregulated" aria-pressed="false">Company outside prudential regulation</button>
+      </div>
+      <p class="small soft" id="sectornote">A banking example is being written.</p>
+      <div class="trylist" id="trylist" hidden>
+        <a class="btn trybtn" data-app="aiBoardDirection" data-sectors="superannuation unregulated" href="/auth/try?app=aiBoardDirection"><strong>AI Board Direction</strong><span>The board's directions on AI: where to use it and what to rule out</span></a>
+        <a class="btn trybtn" data-app="aiRiskAppetite" data-sectors="superannuation insurance" href="/auth/try?app=aiRiskAppetite"><strong>AI Risk Appetite</strong><span>How much authority AI may hold, and the triggers that act on it</span></a>
+        <a class="btn trybtn" data-app="aiUseAssessment" data-sectors="superannuation insurance" href="/auth/try?app=aiUseAssessment"><strong>AI Use Assessment</strong><span>Whether each AI use, including in the supply chain, fits the appetite</span></a>
+        <a class="btn trybtn" data-app="aiConfidentialityExposureAssessment" data-sectors="unregulated" href="/auth/try?app=aiConfidentialityExposureAssessment"><strong>AI Confidentiality Exposure Assessment</strong><span>Where matter information can reach an external AI model</span></a>
       </div>
       <p class="notice" id="tryoff" hidden>Worked examples open from the demo site only.</p>
     </section>

@@ -19,6 +19,13 @@
   var jur = function () { return (T().jurisdictions || []).find(function (j) { return j.code === S.a.jurisdiction; }); };
   var sector = function () { return (T().sectors || []).find(function (d) { return d.regulatedSectorID === S.a.sector; }); };
   var orgChosen = function () { return !!(S.a.sector || S.a.entityType); };
+  // The worked example that matches the answers: a superannuation or insurance sector opens that sector's example, and
+  // an organisation outside the regulated sectors opens the unregulated one. Other sectors open each app's first example.
+  var exampleFor = function () {
+    var id = String(S.a.sector || '').toUpperCase();
+    var ex = /SUPERANNUATION/.test(id) ? 'superannuation' : /INSURANCE/.test(id) ? 'insurance' : /-GENERAL$/.test(id) || (!S.a.sector && S.a.entityType) ? 'unregulated' : '';
+    return ex ? '&amp;example=' + ex : '';
+  };
 
   function opt(name, value, label, on, note) {
     return '<label class="toggle"><input type="radio" name="' + name + '" value="' + esc(value) + '"' + (on ? ' checked' : '') + '><span>' + esc(label) + (note ? ' <span class="note">' + esc(note) + '</span>' : '') + '</span></label>';
@@ -64,7 +71,7 @@
         + '<div class="needs"><div><h4>People</h4><ul>' + e.needs.people.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul></div>'
         + '<div><h4>Documents</h4><ul>' + e.needs.documents.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul></div>'
         + '<div><h4>Sessions</h4><p class="small" style="margin:4px 0 0">' + esc(e.needs.sessions) + '</p></div></div>'
-        + '<div class="acts">' + (S.me.tryFirst ? '<a class="btn sm" href="/auth/try?from=start&amp;app=' + encodeURIComponent(e.assessmentType) + '">Try the worked example</a>' : '') + '</div></article>';
+        + '<div class="acts">' + (S.me.tryFirst ? '<a class="btn sm" href="/auth/try?from=start&amp;app=' + encodeURIComponent(e.assessmentType) + exampleFor() + '">Try the worked example</a>' : '') + '</div></article>';
     });
     h += '<p><a class="btn" id="brief" href="' + esc(s.matterBrief.url) + '" target="_blank" rel="noopener">Open the matter brief for this scope</a> <span class="small soft">Opens the AI Obligations Atlas, with your jurisdiction, organisation type and use cases chosen.</span></p>';
     return h + '</section>';
