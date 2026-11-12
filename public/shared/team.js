@@ -24,6 +24,8 @@ export const ROLES = {
     { id: 'cro', name: 'CRO', side: 'client', min: 1, max: 1, mode: 'connected', explain: 'Proposes positions with the directors and carries the board’s directions into the AI risk appetite engagement.' },
     { id: 'advisor', name: 'Board advisor', side: 'client', min: 0, max: 2, explain: 'Optional. Advises the board and can put questions to counsel.' },
     { id: 'areaOwner', name: 'Area owners', one: 'Area owner', side: 'client', min: 0, max: 12, explain: 'Optional. The executive who owns each area of the business the board sets a posture for.' },
+    { id: 'technologyOwner', name: 'Technology owner', side: 'client', min: 0, max: 1, explain: 'Optional. One person, usually the CIO. Confirms each line of the list of AI in use and each measure drafted for the board. Proposes no position.' },
+    { id: 'aiGovernance', name: 'AI governance team', one: 'AI governance team member', side: 'client', min: 0, max: 8, explain: 'Optional. Enter and keep the list of AI in use and draft the measures the board will receive. Propose no position. Add each member.' },
     { id: 'methodOwner', name: 'Method owner', side: 'triodian', min: 1, max: 1, explain: 'Sets up the engagement and owns the method.' },
     { id: 'recorder', name: 'Recorder', side: 'triodian', min: 1, max: 1, explain: 'Records the board’s positions as it decides them.' },
   ],
@@ -33,7 +35,7 @@ export const ROLES = {
     { id: 'board', name: 'Board record', side: 'client', min: 1, max: 1, explain: 'Records the board’s approval, with its date and minute reference. Usually the company secretary.' },
     { id: 'independent', name: 'Independent reviewer', side: 'client', min: 1, max: 1, explain: 'Challenges the positions. Holds no other role in this engagement.' },
     { id: 'gc', name: 'General counsel', side: 'client', min: 0, max: 1, explain: 'Optional. Can write the overall position and answer questions for counsel.' },
-    { id: 'risk', name: 'Risk function', side: 'client', min: 0, max: 6, explain: 'Optional. Supports the CRO with thresholds, tolerances and measures.' },
+    { id: 'risk', name: 'Risk or AI governance function', side: 'client', min: 0, max: 6, explain: 'Optional. Supports the CRO with thresholds, tolerances and measures. Where there is an AI governance team, its members sit here.' },
     { id: 'triodian', name: 'Recorder', side: 'triodian', min: 1, max: 1, explain: 'Supplies the structure and the technical scales, and records the decisions.' },
   ],
   aiUseAssessment: [
@@ -43,6 +45,8 @@ export const ROLES = {
     { id: 'cro', name: 'CRO', side: 'client', min: 1, max: 1, explain: 'Receives the findings and the independent reviewer’s report.' },
     { id: 'owner', name: 'Arrangement owners', one: 'Arrangement owner', side: 'client', min: 1, max: 15, explain: 'The person who runs each provider arrangement in scope. Add each one.' },
     { id: 'ir', name: 'Independent reviewer', side: 'client', min: 1, max: 1, explain: 'Checks the assessment on the CRO’s behalf. Holds no other role in this engagement.' },
+    { id: 'technologyOwner', name: 'Technology owner', side: 'client', min: 0, max: 1, explain: 'Optional. One person, usually the CIO. Hands over the inventory and the evidence, and confirms the hand-over complete. Sees the hand-over and what counsel releases, not the rest of the assessment.' },
+    { id: 'aiGovernance', name: 'AI governance team', one: 'AI governance team member', side: 'client', min: 0, max: 8, explain: 'Optional. Supply the inventory, the evidence for each arrangement and what existing assurance covers. They can contest a point in counsel’s updates and ask for a consultation. Add each member.' },
     ...TRIODIAN_ASSESSMENT,
   ],
   aiConfidentialityExposureAssessment: [
@@ -57,6 +61,8 @@ export const ROLES = {
 };
 export const ENGAGEMENT_NAMES = { aiBoardDirection: 'AI Board Direction', aiRiskAppetite: 'AI Risk Appetite', aiUseAssessment: 'AI Use Assessment', aiConfidentialityExposureAssessment: 'AI Confidentiality Exposure Assessment' };
 const INDEPENDENT = { aiRiskAppetite: 'independent', aiUseAssessment: 'ir', aiConfidentialityExposureAssessment: 'checker' };
+/** Who supplies the inventory, the evidence or the positions (development plan task 7.5): none of them is an independent reviewer of any engagement in the set. */
+const SUPPLIERS = { aiBoardDirection: ['technologyOwner', 'aiGovernance'], aiUseAssessment: ['technologyOwner', 'aiGovernance'], aiRiskAppetite: ['risk'] };
 const TWO_AGREE = { aiUseAssessment: 'the set of arrangements', aiConfidentialityExposureAssessment: 'the matter profile' };
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -136,6 +142,15 @@ export function checkTeam(engagements, team, opts = {}) {
     if (ind && key(ind)) {
       const also = roles.filter(r => r.id !== INDEPENDENT[a] && people(team, a, r.id).some(p => key(p) === key(ind)));
       if (also.length) add('independence', `${en}: ${label(ind)} is the ${roles.find(r => r.id === INDEPENDENT[a]).name.toLowerCase()} and also ${also.map(r => r.name).join(' and ')}. The reviewer holds no other role, so the check stays independent.`, INDEPENDENT[a]);
+    }
+    // Independence across the set (task 7.5): whoever supplies the inventory, the evidence or the positions in any
+    // engagement is not the independent reviewer of this one.
+    if (ind && key(ind) && a !== 'aiConfidentialityExposureAssessment') {
+      for (const o of engagements) {
+        if (o.assessmentType === a) continue;
+        const held = rolesFor(o).filter(r => (SUPPLIERS[o.assessmentType] || []).includes(r.id) && people(team, o.assessmentType, r.id).some(p => key(p) === key(ind)));
+        if (held.length) add('independence', `${en}: ${label(ind)} is the ${roles.find(r => r.id === INDEPENDENT[a]).name.toLowerCase()} and also ${held.map(r => r.name).join(' and ')} in ${ENGAGEMENT_NAMES[o.assessmentType] || o.assessmentType}. A person who supplies the inventory, the evidence or the positions does not review them.`, INDEPENDENT[a]);
+      }
     }
     // Triodian's own team: the peer reviewer and validation are not the assessor.
     if (opts.triodian) {

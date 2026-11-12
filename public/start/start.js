@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   var S = { me: null, table: null, a: {}, name: '', org: '', sol: null, err: '', saved: '', seq: 0 };
-  var PART = { gc: 'General counsel', advisor: 'Board advisor', chair: 'Chair (with the directors)', board: 'The board, to approve', cro: 'CRO', counsel: 'Counsel (facilitator)' };
+  var PART = { gc: 'General counsel', advisor: 'Board advisor', chair: 'Chair (with the directors)', board: 'The board, to approve', cro: 'CRO', counsel: 'Counsel (facilitator)', technologyOwner: 'Technology owner: you supply what exists and shape the reporting', risk: 'Risk or AI governance function' };
   var main = document.getElementById('main');
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   function api(method, path, body) {

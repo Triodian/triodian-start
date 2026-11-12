@@ -29,7 +29,7 @@ r = await call('GET', '/api/admin/prospects', 'damian.hickey@triodian.com');
 ok('a Triodian administrator can', r.status === 200 && r.body.prospects.length === 2);
 
 r = await call('GET', '/api/table', 'ana@coastline.example');
-ok('the routing table comes from the Atlas', r.status === 200 && r.body.format === 'triodian.routingTable/1' && r.body.roles.length === 7);
+ok('the routing table comes from the Atlas', r.status === 200 && r.body.format === 'triodian.routingTable/1' && r.body.roles.length === 8 && r.body.roles.some(x => x.id === 'technologyLead'));
 const T = table();
 ok('answers are checked against the table', answersError({ role: 'croOrRisk', jurisdiction: 'AU', sector: 'AU-SUPERANNUATION' }, T) === null
   && /Unknown role/.test(answersError({ role: 'x' }, T)) && /not in SG/.test(answersError({ jurisdiction: 'SG', sector: 'AU-SUPERANNUATION' }, T))
