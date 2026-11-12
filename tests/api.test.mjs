@@ -99,6 +99,13 @@ ok('a cookie signed with another key is refused', (await asApp('tri_demo=' + awa
 ok('a cookie for anyone but the demo account is refused', (await asApp('tri_demo=' + await demoTokenFor(env.DEMO_SESSION_KEY, 'ana@coastline.example', Math.floor(Date.now() / 1000) + 60))) === null);
 res = await tryFirst(new Request('https://start-test.triodian.com/auth/try?app=aiBoardDirection'), { ...env, APP_HOST_SUFFIX: '-test' });
 ok('on the test site it opens the test app', res.headers.get('location') === 'https://board-direction-test.triodian.com/?suite=1');
+// Worked examples by sector: the sector chosen on the landing page, or the one that matches the answers, goes to the app.
+res = await tryFirst(new Request('https://start.triodian.com/auth/try?app=aiUseAssessment&example=superannuation'), env);
+ok('a sector is passed to the app, which opens its example for it', res.headers.get('location') === 'https://use-assessment.triodian.com/?suite=1&example=superannuation');
+res = await tryFirst(new Request('https://start.triodian.com/auth/try?app=aiUseAssessment&example=' + encodeURIComponent('x&next=//evil.example')), env);
+ok('anything that is not a known sector is dropped', res.headers.get('location') === 'https://use-assessment.triodian.com/?suite=1');
+res = await tryFirst(new Request('https://start.triodian.com/auth/try?app=aiBoardDirection&example=unregulated'), { ...env, TRY_BASE_URL: 'http://localhost:8898/apps/' });
+ok('with a base address for the apps, the sector follows the path', res.headers.get('location') === 'http://localhost:8898/apps/board-direction/?example=unregulated');
 res = await tryFirst(new Request('https://start.triodian.com/auth/try?app=aiRiskAppetite'), { SUITE_DEMO: 'on' });
 ok('without the demo key it goes back to the landing page and says so', res.headers.get('location') === '/?try=off' && !res.headers.get('set-cookie'));
 res = await tryFirst(new Request('https://start.triodian.com/auth/try?from=start&app=x'), env);

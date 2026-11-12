@@ -8,10 +8,24 @@ test('the landing page is open to anyone and offers two ways in: sign up, or try
   await expect(page.getByRole('heading', { level: 2, name: 'Find the engagements that fit' })).toBeVisible();
   await expect(page.locator('#methods a').first()).toHaveAttribute('href', /^\/auth\/[a-z]+\?next=%2Fstart%2F$/);
   await expect(page.getByRole('heading', { level: 2, name: 'Try a worked example first' })).toBeVisible();
-  const tries = page.locator('#trylist a.trybtn');
-  await expect(tries).toHaveCount(4);
-  await expect(tries.first()).toHaveAttribute('href', '/auth/try?app=aiBoardDirection');
+  // The visitor chooses the kind of organisation first; the apps with a worked example for it are then listed.
+  await expect(page.locator('#sectors [data-sector]')).toHaveText(['Superannuation fund', 'Insurer', 'Company outside prudential regulation']);
+  await expect(page.locator('#trylist')).toBeHidden();
   await expect(page.locator('#tryoff')).toBeHidden();
+  const shown = () => page.locator('#trylist a.trybtn:visible');
+  await page.locator('#sectors [data-sector="superannuation"]').click();
+  await expect(page.locator('#sectors [data-sector="superannuation"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Risk Appetite', 'AI Use Assessment']);
+  await expect(shown().first()).toHaveAttribute('href', '/auth/try?app=aiBoardDirection&example=superannuation');
+  await page.locator('#sectors [data-sector="insurance"]').click();
+  await expect(shown().locator('strong')).toHaveText(['AI Risk Appetite', 'AI Use Assessment']);
+  await expect(shown().last()).toHaveAttribute('href', '/auth/try?app=aiUseAssessment&example=insurance');
+  await page.locator('#sectors [data-sector="unregulated"]').click();
+  await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Confidentiality Exposure Assessment']);
+  await expect(page.locator('#sectors [data-sector="superannuation"]')).toHaveAttribute('aria-pressed', 'false');
+  // the link opens the app on that sector's example
+  const res = await page.request.get('/auth/try?app=aiBoardDirection&example=unregulated', { maxRedirects: 0 });
+  expect(res.headers()['location']).toBe('http://localhost:8898/apps/board-direction/?example=unregulated');
 });
 
 test('a visitor who has not signed up can open a worked example', async ({ playwright }) => {
@@ -54,6 +68,8 @@ test('each answer changes what is shown next, and the solution set follows the A
   await expect(eng.nth(0)).toContainText('Start here');
   await expect(p.locator('#brief')).toHaveAttribute('href', /#\/brief\/.*AU-SUPERANNUATION/);
   await expect(p.locator('.eng a', { hasText: 'Try the worked example' })).toHaveCount(3);
+  // a superannuation answer leads to the superannuation worked examples
+  await expect(p.locator('.eng a', { hasText: 'Try the worked example' }).first()).toHaveAttribute('href', /[?&]example=superannuation$/);
   // Save, then the answers are there on a fresh visit.
   await p.fill('#f-name', 'Ana Cruz'); await p.fill('#f-org', 'Coastline Super');
   await expect(p.locator('aside.facts')).toContainText('Superannuation');
@@ -69,6 +85,7 @@ test('each answer changes what is shown next, and the solution set follows the A
   await expect(p.locator('#q-size')).toHaveCount(0);
   await expect(p.locator('.eng')).toHaveCount(0);
   await p.locator('#q-org').getByLabel('Private company').check();
+  await expect(p.locator('.eng a', { hasText: 'Try the worked example' }).first()).toHaveAttribute('href', /[?&]example=unregulated$/);
   await expect(p.locator('.eng')).toHaveCount(2);
   await expect(p.locator('.eng').nth(0)).toContainText('Standalone mode');
   await p.getByLabel('Fewer than 100 staff').check();
