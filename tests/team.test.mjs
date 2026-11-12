@@ -7,9 +7,9 @@ import { stubFetch, PRACTITIONERS } from './atlas/stub.mjs';
 let fails = 0; const ok = (label, cond, extra) => { if (!cond) fails++; console.log((cond ? 'PASS' : 'FAIL') + ' · ' + label + (extra && !cond ? ' → ' + extra : '')); };
 // Each app's own role ids (its public/shared/rules.js or lib/core/roles.js), so the stepper names real roles.
 const APP_ROLES = {
-  aiBoardDirection: ['methodOwner', 'recorder', 'advisor', 'gc', 'chair', 'director', 'ceo', 'cro', 'areaOwner'],
+  aiBoardDirection: ['methodOwner', 'recorder', 'advisor', 'gc', 'chair', 'director', 'ceo', 'cro', 'areaOwner', 'technologyOwner', 'aiGovernance'],
   aiRiskAppetite: ['counsel', 'gc', 'triodian', 'cro', 'risk', 'independent', 'board'],
-  aiUseAssessment: ['methodOwner', 'assessor', 'peer', 'validation', 'delivery', 'counsel', 'gc', 'owner', 'ir', 'cro', 'executive'],
+  aiUseAssessment: ['methodOwner', 'assessor', 'peer', 'validation', 'delivery', 'counsel', 'gc', 'owner', 'ir', 'cro', 'executive', 'technologyOwner', 'aiGovernance'],
   aiConfidentialityExposureAssessment: ['methodOwner', 'assessor', 'peer', 'validation', 'delivery', 'counsel', 'gc', 'dealLead', 'tenantOwner', 'checker', 'executive'],
 };
 for (const [a, roles] of Object.entries(ROLES)) {
@@ -29,6 +29,22 @@ const good = () => ({ assign: {
 const codes = t => checkTeam(regulated, t).map(p => p.code + ':' + p.engagement + ':' + (p.role || ''));
 ok('a complete team with no conflicts can start', checkTeam(regulated, good()).length === 0, JSON.stringify(checkTeam(regulated, good())));
 ok('an empty team lists every needed role, and nothing optional', checkTeam(regulated, { assign: {} }).every(p => p.code === 'unfilled') && checkTeam(regulated, { assign: {} }).length === 5 + 4 + 5);
+
+// Management's roles (development plan tasks 7.5 and 7.7): optional, and never the independent reviewer.
+{ let m = good();
+  m.assign.aiBoardDirection.technologyOwner = [P('Tess CIO', 'tess@coastline.example')]; m.assign.aiBoardDirection.aiGovernance = [P('Gov One', 'gov1@coastline.example'), P('Gov Two', 'gov2@coastline.example')];
+  m.assign.aiUseAssessment.technologyOwner = [P('Tess CIO', 'tess@coastline.example')]; m.assign.aiUseAssessment.aiGovernance = [P('Gov One', 'gov1@coastline.example')];
+  ok('a team is complete without the technology owner or the AI governance team, and with them', checkTeam(regulated, good()).length === 0 && checkTeam(regulated, m).length === 0, JSON.stringify(checkTeam(regulated, m)));
+  ok('both roles are in AI Board Direction and AI Use Assessment, each explained in plain words', ['aiBoardDirection', 'aiUseAssessment'].every(a => ['technologyOwner', 'aiGovernance'].every(id => { const r = ROLES[a].find(x => x.id === id); return r && r.min === 0 && r.side === 'client' && /^Optional\./.test(r.explain); })) && ROLES.aiBoardDirection.find(r => r.id === 'technologyOwner').max === 1);
+  m.assign.aiBoardDirection.technologyOwner.push(P('Second CIO', 'cio2@coastline.example'));
+  ok('one person is the technology owner', codes(m).join() === 'tooMany:aiBoardDirection:technologyOwner');
+  m = good(); m.assign.aiUseAssessment.aiGovernance = [P('Ira', 'ira@review.example')];
+  ok('a member of the AI governance team is not the independent reviewer of the same assessment', codes(m).includes('independence:aiUseAssessment:ir'));
+  m = good(); m.assign.aiBoardDirection.aiGovernance = [P('Ira', 'IRA@review.example')];
+  const pr = checkTeam(regulated, m);
+  ok('nor of another engagement in the set: whoever supplies the inventory does not review', pr.length === 2 && pr.every(p => p.code === 'independence') && pr.map(p => p.engagement).sort().join() === 'aiRiskAppetite,aiUseAssessment' && /A person who supplies the inventory, the evidence or the positions does not review them/.test(pr[0].reason), JSON.stringify(pr));
+  m = good(); m.assign.aiRiskAppetite.risk = [P('Rae Risk', 'rae@coastline.example')]; m.assign.aiUseAssessment.ir = [P('Rae Risk', 'rae@coastline.example')];
+  ok('the risk or AI governance function of the appetite does not review the assessment', codes(m).join() === 'independence:aiUseAssessment:ir'); }
 
 let t = good(); delete t.assign.aiRiskAppetite.board;
 ok('a needed role left empty stops the start, and the reason names it', codes(t).join() === 'unfilled:aiRiskAppetite:board' && /AI Risk Appetite: no one is named as Board record/.test(checkTeam(regulated, t)[0].reason));

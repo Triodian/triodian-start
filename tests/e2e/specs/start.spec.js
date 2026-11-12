@@ -220,6 +220,65 @@ test('the team stepper fills each engagement, shows a conflict with its reason, 
   await ctx.close();
 });
 
+// Management's roles (development plan tasks 7.5 and 7.7): a CIO signs up, the two roles are optional in the team
+// step, and whoever supplies the inventory or the evidence is not the independent reviewer of any engagement in the set.
+test('a CIO signs up: the technology owner and the AI governance team are optional, and never the independent reviewer', async ({ browser }) => {
+  const ctx = await ctxFor(browser, 'tess.cio@meridian.example'); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
+  await p.goto('/start/');
+  await expect(p.locator('body')).toContainText('CIO, CTO or AI governance lead');   // in the who-you-are question, from the Atlas routing table
+  await ctx.request.put('/api/profile', { data: { name: 'Tess', organisation: 'Meridian Insurance', answers: { role: 'technologyLead', jurisdiction: 'AU', entityType: 'generalInsurer', size: 'large' } } });
+  await ctx.request.put('/api/run-by', { data: { mode: 'self' } });
+  const view = await (await ctx.request.get('/api/team')).json();
+  expect(view.engagements.map(e => e.assessmentType).sort()).toEqual(['aiBoardDirection', 'aiRiskAppetite', 'aiUseAssessment']);
+  // every needed role filled, the two new roles left empty: the team is complete without them
+  const assign = {}; for (const e of view.engagements) for (const r of e.roles.filter(x => x.side === 'client' && x.min > 0)) (assign[e.assessmentType] = assign[e.assessmentType] || {})[r.id] = [{ name: r.name + ' Person', email: `${r.id}@meridian.example` }];
+  for (const a of ['aiRiskAppetite', 'aiUseAssessment']) assign[a][a === 'aiUseAssessment' ? 'ir' : 'independent'] = [{ name: 'Ira Reviewer', email: 'ira@review.example' }];
+  expect((await ctx.request.put('/api/team', { data: { assign } })).status()).toBe(200);
+  await p.goto('/start/team/');
+  const step = name => p.locator('#nav .stepchip', { hasText: name }).click();
+  const fill = async (role, i, name, email) => { await p.fill(`#in-${role}-${i}-n`, name); await p.fill(`#in-${role}-${i}-e`, email); };
+  await step('Check and start');
+  await expect(p.locator('#ready')).toBeVisible();
+  // AI Board Direction: both roles are offered as optional, each with its explanation
+  await step('AI Board Direction');
+  for (const r of ['technologyOwner', 'aiGovernance']) await expect(p.locator(`[data-role="${r}"] .badge`)).toHaveText('Optional');
+  await expect(p.locator('[data-role="technologyOwner"]')).toContainText('One person, usually the CIO');
+  await expect(p.locator('[data-role="aiGovernance"]')).toContainText('Propose no position');
+  await expect(p.locator('[data-role="technologyOwner"] [data-add]')).toHaveCount(0);   // one person holds it
+  await fill('aiBoardDirection-technologyOwner', 0, 'Tess', 'tess.cio@meridian.example');
+  await fill('aiBoardDirection-aiGovernance', 0, 'Gov One', 'gov1@meridian.example');
+  await p.locator('[data-role="aiGovernance"] [data-add]').click();
+  await fill('aiBoardDirection-aiGovernance', 1, 'Ira Reviewer', 'ira@review.example');   // the reviewer of the other two engagements
+  await expect(p.locator('#checks')).toContainText('Nothing to fix here.');              // nothing wrong in this engagement alone
+  // AI Use Assessment: the same roles, and a team member cannot also be its independent reviewer
+  await step('AI Use Assessment');
+  await expect(p.locator('#checks')).toContainText('Ira Reviewer is the independent reviewer and also AI governance team in AI Board Direction. A person who supplies the inventory, the evidence or the positions does not review them.');
+  await expect(p.locator('[data-role="technologyOwner"]')).toContainText('Sees the hand-over and what counsel releases, not the rest of the assessment');
+  await fill('aiUseAssessment-technologyOwner', 0, 'Tess', 'tess.cio@meridian.example');
+  await fill('aiUseAssessment-aiGovernance', 0, 'Gov One', 'gov1@meridian.example');
+  // the start is refused, with the reason, in the page and the API
+  await step('Check and start');
+  await expect(p.locator('#start')).toBeDisabled();
+  await expect(p.locator('#blockers')).toContainText('does not review them');
+  const refused = await ctx.request.post('/api/team/start');
+  expect(refused.status()).toBe(409); expect((await refused.json()).code).toBe('team_not_ready');
+  // fix it: someone else is the second member of the team
+  await step('AI Board Direction');
+  await fill('aiBoardDirection-aiGovernance', 1, 'Gov Two', 'gov2@meridian.example');
+  await step('Check and start');
+  await expect(p.locator('#ready')).toBeVisible();
+  await expect(p.locator('.ptable')).toContainText('AI Board Direction: Technology owner');
+  await expect(p.locator('.ptable')).toContainText('AI Use Assessment: AI governance team');
+  await p.click('#start');
+  await expect(p.locator('#started')).toContainText('Triodian has your team');
+  const team = (await (await ctx.request.get('/api/me')).json()).prospect.team.assign;
+  expect(team.aiBoardDirection.technologyOwner[0].email).toBe('tess.cio@meridian.example');
+  expect(team.aiBoardDirection.aiGovernance.map(x => x.email)).toEqual(['gov1@meridian.example', 'gov2@meridian.example']);
+  expect(team.aiUseAssessment.aiGovernance[0].email).toBe('gov1@meridian.example');
+  expect(errs).toEqual([]);
+  await ctx.close();
+});
+
 // Provisioning on completion (task 5.6): a Triodian administrator approves the request, takes the job file to the
 // provisioning script, brings its result back, and the client sees its apps. Sending is off on this test server.
 test('a Triodian administrator approves a request, sets it up from the job file, and the client then sees its apps', async ({ browser }) => {

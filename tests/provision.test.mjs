@@ -142,4 +142,24 @@ r = await call('POST', '/api/team/start', BO);
 ok('asking again clears the note', r.status === 200 && r.body.returned === null && r.body.started);
 r = await call('GET', `/api/admin/requests/nope/job`, ADMIN);
 ok('an unknown request is not found', r.status === 404);
+// A CIO's team (development plan task 7.7): the job file carries the technology owner and the AI governance team with
+// their roles in each app, in the same format, and their invitation says what their part is.
+{ const { peopleFor, invitationsFor, jobFor, JOB_FORMAT: JF } = await import('../lib/core/provision.js');
+  const P = (name, email) => ({ name, email });
+  const p = { id: 'r-cio', email: 'tess@harrow.example', name: 'Tess CIO', organisation: 'Harrow Valley Foods', status: 'approved', answers: { role: 'technologyLead', jurisdiction: 'AU' },
+    solution: { engagements: [{ assessmentType: 'aiBoardDirection', mode: 'standalone' }, { assessmentType: 'aiUseAssessment' }] },
+    team: { runBy: { mode: 'triodian' }, assign: {
+      aiBoardDirection: { chair: [P('Cy', 'cy@harrow.example')], director: [P('Di', 'di@harrow.example')], ceo: [P('Cleo', 'cleo@harrow.example')], gc: [P('Gia', 'gia@harrow.example')], technologyOwner: [P('Tess CIO', 'tess@harrow.example')], aiGovernance: [P('Gov One', 'gov1@harrow.example'), P('Gov Two', 'gov2@harrow.example')] },
+      aiUseAssessment: { counsel: [P('Kim', 'kim@law.example')], gc: [P('Gia', 'gia@harrow.example')], cro: [P('Ana', 'ana@harrow.example')], owner: [P('Owen', 'owen@harrow.example')], ir: [P('Ira', 'ira@review.example')], technologyOwner: [P('Tess CIO', 'tess@harrow.example')], aiGovernance: [P('Gov One', 'gov1@harrow.example')] } } },
+    provision: { code: 'harrow', admin: 'gia@harrow.example', apps: ['board-direction', 'use-assessment'], delivery: { assign: {} }, approvedBy: 'a@triodian.com', approvedAt: '2026-11-12T00:00:00Z', appUrls: [{ id: 'board-direction', url: 'https://bd.example' }, { id: 'use-assessment', url: 'https://ua.example' }] } };
+  const people = peopleFor(p, p.provision), who = e => people.find(x => x.email === e);
+  ok('the CIO is the technology owner in both apps', JSON.stringify(who('tess@harrow.example').apps) === JSON.stringify({ 'board-direction': ['technologyOwner'], 'use-assessment': ['technologyOwner'] }));
+  ok('each member of the AI governance team has the role in the apps they were named in', JSON.stringify(who('gov1@harrow.example').apps) === JSON.stringify({ 'board-direction': ['aiGovernance'], 'use-assessment': ['aiGovernance'] }) && JSON.stringify(who('gov2@harrow.example').apps) === JSON.stringify({ 'board-direction': ['aiGovernance'] }));
+  const job = jobFor(p);
+  ok('the job file carries them in the same format', job.format === JF && job.format === 'triodian.provisionJob/1' && job.people.some(x => (x.apps['use-assessment'] || []).includes('aiGovernance')));
+  p.status = 'provisioned';
+  const inv = invitationsFor(p), t = e => inv.find(x => x.email === e).text;
+  ok('their invitation says the part is to supply what exists and shape the reporting', /supply what exists/.test(t('tess@harrow.example')) && /shape what is reported/.test(t('gov2@harrow.example')) && /Technology owner/.test(t('tess@harrow.example')) && /AI governance team member/.test(t('gov1@harrow.example')));
+  ok('nobody else’s invitation carries that line', !/supply what exists/.test(t('cy@harrow.example')) && !/supply what exists/.test(t('ira@review.example'))); }
+
 console.log(fails ? `\n${fails} failed` : '\nall passed'); process.exit(fails ? 1 : 0);
