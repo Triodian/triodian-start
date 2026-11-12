@@ -18,7 +18,7 @@ test('the landing page is open to anyone and offers two ways in: sign up, or try
   await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Risk Appetite', 'AI Use Assessment']);
   await expect(shown().first()).toHaveAttribute('href', '/auth/try?app=aiBoardDirection&example=superannuation');
   await page.locator('#sectors [data-sector="insurance"]').click();
-  await expect(shown().locator('strong')).toHaveText(['AI Risk Appetite', 'AI Use Assessment']);
+  await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Risk Appetite', 'AI Use Assessment']);
   await expect(shown().last()).toHaveAttribute('href', '/auth/try?app=aiUseAssessment&example=insurance');
   await page.locator('#sectors [data-sector="unregulated"]').click();
   await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Confidentiality Exposure Assessment']);
