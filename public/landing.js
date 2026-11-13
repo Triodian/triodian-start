@@ -22,7 +22,7 @@
   if (q.has('out')) document.getElementById('m-out').hidden = false;
   // Try first needs the demo key on this site; without it, say so instead of offering buttons that can't work.
   var isOff = false, list = document.getElementById('trylist'), sectors = document.getElementById('sectors');
-  var off = function () { isOff = true; list.hidden = true; sectors.hidden = true; document.getElementById('sectornote').hidden = true; document.getElementById('tryoff').hidden = false; };
+  var off = function () { isOff = true; list.hidden = true; sectors.hidden = true; document.getElementById('tryoff').hidden = false; };
   // The visitor chooses the kind of organisation first. The apps that have a worked example for it are then listed, and
   // each link carries the choice (example=<sector>) so the app opens on that example. Same sector ids in every app.
   sectors.addEventListener('click', function (ev) {

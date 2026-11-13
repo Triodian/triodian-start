@@ -9,7 +9,7 @@ test('the landing page is open to anyone and offers two ways in: sign up, or try
   await expect(page.locator('#methods a').first()).toHaveAttribute('href', /^\/auth\/[a-z]+\?next=%2Fstart%2F$/);
   await expect(page.getByRole('heading', { level: 2, name: 'Try a worked example first' })).toBeVisible();
   // The visitor chooses the kind of organisation first; the apps with a worked example for it are then listed.
-  await expect(page.locator('#sectors [data-sector]')).toHaveText(['Superannuation fund', 'Insurer', 'Company outside prudential regulation']);
+  await expect(page.locator('#sectors [data-sector]')).toHaveText(['Superannuation fund', 'Bank', 'Insurer', 'Company outside prudential regulation']);
   await expect(page.locator('#trylist')).toBeHidden();
   await expect(page.locator('#tryoff')).toBeHidden();
   const shown = () => page.locator('#trylist a.trybtn:visible');
@@ -17,6 +17,9 @@ test('the landing page is open to anyone and offers two ways in: sign up, or try
   await expect(page.locator('#sectors [data-sector="superannuation"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Risk Appetite', 'AI Use Assessment']);
   await expect(shown().first()).toHaveAttribute('href', '/auth/try?app=aiBoardDirection&example=superannuation');
+  await page.locator('#sectors [data-sector="banking"]').click();
+  await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Risk Appetite', 'AI Use Assessment']);
+  await expect(shown().nth(1)).toHaveAttribute('href', '/auth/try?app=aiRiskAppetite&example=banking');
   await page.locator('#sectors [data-sector="insurance"]').click();
   await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Risk Appetite', 'AI Use Assessment']);
   await expect(shown().last()).toHaveAttribute('href', '/auth/try?app=aiUseAssessment&example=insurance');

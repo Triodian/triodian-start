@@ -19,11 +19,11 @@
   var jur = function () { return (T().jurisdictions || []).find(function (j) { return j.code === S.a.jurisdiction; }); };
   var sector = function () { return (T().sectors || []).find(function (d) { return d.regulatedSectorID === S.a.sector; }); };
   var orgChosen = function () { return !!(S.a.sector || S.a.entityType); };
-  // The worked example that matches the answers: a superannuation or insurance sector opens that sector's example, and
+  // The worked example that matches the answers: a superannuation, banking or insurance sector opens that sector's example, and
   // an organisation outside the regulated sectors opens the unregulated one. Other sectors open each app's first example.
   var exampleFor = function () {
     var id = String(S.a.sector || '').toUpperCase();
-    var ex = /SUPERANNUATION/.test(id) ? 'superannuation' : /INSURANCE/.test(id) ? 'insurance' : /-GENERAL$/.test(id) || (!S.a.sector && S.a.entityType) ? 'unregulated' : '';
+    var ex = /SUPERANNUATION/.test(id) ? 'superannuation' : /BANKING/.test(id) ? 'banking' : /INSURANCE/.test(id) ? 'insurance' : /-GENERAL$/.test(id) || (!S.a.sector && S.a.entityType) ? 'unregulated' : '';
     return ex ? '&amp;example=' + ex : '';
   };
 
