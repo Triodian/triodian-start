@@ -22,6 +22,8 @@ not covered by the licence.
 
 Still to come: the journey view (5.7) and terms, privacy and pricing (5.9).
 
+Both pages close with **What the apps cover** (development plan task BP.7): the main sectors in each jurisdiction, the [best-practice baselines](https://github.com/Triodian/Triodian_Metamodel/blob/main/docs/baselines.md) and the four controls every baseline carries, the accountable authority for public bodies, and [adding a jurisdiction](https://github.com/Triodian/Triodian_Metamodel/blob/main/docs/adding-a-jurisdiction.md), with links to each app's notes, the security answers, the privacy notice and Support the project. The wording is in `public/index.html` and `public/start/index.html`; keep the two the same.
+
 ## How it fits together
 
 | Part | Where |
