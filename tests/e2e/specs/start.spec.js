@@ -385,3 +385,17 @@ test('the home page\'s two ways in are laid out as cards, each read top to botto
   }
   await ctx.close();
 });
+
+// What the apps cover, and help and support (development plan task BP.7), on the landing page and the signed-in page.
+test('both pages say what the apps cover and where to get help', async ({ browser, page }) => {
+  for (const p of [page, await (await ctxFor(browser, 'guide@example.com')).newPage()]) {
+    await p.goto(p === page ? '/' : '/start/');
+    const g = p.locator('#guide');
+    await expect(g.getByRole('heading', { level: 2, name: 'What the apps cover' })).toBeVisible();
+    await expect(g).toContainText('Best-practice baselines for any jurisdiction');
+    await expect(g).toContainText('accountable authority');
+    await expect(g).toContainText('Four controls in every baseline');
+    for (const [name, href] of [['The best-practice baselines and the four controls', /docs\/baselines\.md$/], ['Adding a jurisdiction', /docs\/adding-a-jurisdiction\.md$/], ['Security answers', /security-answers\.md$/], ['Privacy notice for the apps', /privacy\.md$/], ['Support the project', /triodian\.com\/support-the-project$/]])
+      await expect(g.getByRole('link', { name, exact: true })).toHaveAttribute('href', href);
+  }
+});
