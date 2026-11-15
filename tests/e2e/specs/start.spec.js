@@ -9,7 +9,8 @@ test('the landing page is open to anyone and offers two ways in: sign up, or try
   await expect(page.locator('#methods a').first()).toHaveAttribute('href', /^\/auth\/[a-z]+\?next=%2Fstart%2F$/);
   await expect(page.getByRole('heading', { level: 2, name: 'Try a worked example first' })).toBeVisible();
   // The visitor chooses the kind of organisation first; the apps with a worked example for it are then listed.
-  await expect(page.locator('#sectors [data-sector]')).toHaveText(['Superannuation fund', 'Bank', 'Insurer', 'Company outside prudential regulation']);
+  await expect(page.locator('#sectors [data-sector]')).toHaveText(['Superannuation fund', 'Bank', 'Insurer', 'Company outside prudential regulation', 'Bank', 'Insurer', 'Broker-dealer', 'Health system', 'Transmission utility']);
+  await expect(page.locator('#sectors .sectorrow-h')).toHaveText(['Australia', 'United States']);
   await expect(page.locator('#trylist')).toBeHidden();
   await expect(page.locator('#tryoff')).toBeHidden();
   const shown = () => page.locator('#trylist a.trybtn:visible');
@@ -26,9 +27,23 @@ test('the landing page is open to anyone and offers two ways in: sign up, or try
   await page.locator('#sectors [data-sector="unregulated"]').click();
   await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Confidentiality Exposure Assessment']);
   await expect(page.locator('#sectors [data-sector="superannuation"]')).toHaveAttribute('aria-pressed', 'false');
+  // the US row (task US.5): the bank and the insurer have an example in all three engagement apps, the other three in AI Board Direction only
+  await page.locator('#sectors [data-sector="us-banking"]').click();
+  await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Risk Appetite', 'AI Use Assessment']);
+  await expect(shown().last()).toHaveAttribute('href', '/auth/try?app=aiUseAssessment&example=us-banking');
+  await expect(page.locator('#sectors [data-sector="banking"]')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#sectors [data-sector="us-insurance"]').click();
+  await expect(shown().locator('strong')).toHaveText(['AI Board Direction', 'AI Risk Appetite', 'AI Use Assessment']);
+  for (const s of ['us-securities', 'us-health', 'us-critical-infrastructure']) {
+    await page.locator(`#sectors [data-sector="${s}"]`).click();
+    await expect(shown().locator('strong')).toHaveText(['AI Board Direction']);
+    await expect(shown().first()).toHaveAttribute('href', `/auth/try?app=aiBoardDirection&example=${s}`);
+  }
   // the link opens the app on that sector's example
   const res = await page.request.get('/auth/try?app=aiBoardDirection&example=unregulated', { maxRedirects: 0 });
   expect(res.headers()['location']).toBe('http://localhost:8898/apps/board-direction/?example=unregulated');
+  const us = await page.request.get('/auth/try?app=aiRiskAppetite&example=us-insurance', { maxRedirects: 0 });
+  expect(us.headers()['location']).toBe('http://localhost:8898/apps/risk-appetite/?example=us-insurance');
 });
 
 test('a visitor who has not signed up can open a worked example', async ({ playwright }) => {
