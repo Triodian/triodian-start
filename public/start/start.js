@@ -21,9 +21,12 @@
   var orgChosen = function () { return !!(S.a.sector || S.a.entityType); };
   // The worked example that matches the answers: a superannuation, banking or insurance sector opens that sector's example, and
   // an organisation outside the regulated sectors opens the unregulated one. Other sectors open each app's first example.
+  // A US sector with a US example (bank, insurer, securities, health, critical infrastructure) opens that one; an app with
+  // no example for it opens its first.
+  var US_EX = { 'US-BANKING': 'us-banking', 'US-INSURANCE': 'us-insurance', 'US-SECURITIES': 'us-securities', 'US-HEALTH': 'us-health', 'US-CRITICAL-INFRASTRUCTURE': 'us-critical-infrastructure' };
   var exampleFor = function () {
     var id = String(S.a.sector || '').toUpperCase();
-    var ex = /SUPERANNUATION/.test(id) ? 'superannuation' : /BANKING/.test(id) ? 'banking' : /INSURANCE/.test(id) ? 'insurance' : /-GENERAL$/.test(id) || (!S.a.sector && S.a.entityType) ? 'unregulated' : '';
+    var ex = US_EX[id] ? US_EX[id] : /SUPERANNUATION/.test(id) ? 'superannuation' : /BANKING/.test(id) ? 'banking' : /INSURANCE/.test(id) ? 'insurance' : /-GENERAL$/.test(id) || (!S.a.sector && S.a.entityType) ? 'unregulated' : '';
     return ex ? '&amp;example=' + ex : '';
   };
 

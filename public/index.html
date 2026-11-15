@@ -33,15 +33,24 @@
       <h2 id="c2">Try a worked example first</h2>
       <p>Choose the kind of organisation. Each app then opens on a worked example for it, with fictional companies. Nothing you do there is saved.</p>
       <div class="sectors" id="sectors" role="group" aria-label="Kind of organisation">
-        <button type="button" class="btn sm sectorbtn" data-sector="superannuation" aria-pressed="false">Superannuation fund</button>
-        <button type="button" class="btn sm sectorbtn" data-sector="banking" aria-pressed="false">Bank</button>
-        <button type="button" class="btn sm sectorbtn" data-sector="insurance" aria-pressed="false">Insurer</button>
-        <button type="button" class="btn sm sectorbtn" data-sector="unregulated" aria-pressed="false">Company outside prudential regulation</button>
+        <div class="sectorrow" role="group" aria-labelledby="sr-au"><span class="sectorrow-h" id="sr-au">Australia</span>
+          <button type="button" class="btn sm sectorbtn" data-sector="superannuation" aria-pressed="false">Superannuation fund</button>
+          <button type="button" class="btn sm sectorbtn" data-sector="banking" aria-pressed="false">Bank</button>
+          <button type="button" class="btn sm sectorbtn" data-sector="insurance" aria-pressed="false">Insurer</button>
+          <button type="button" class="btn sm sectorbtn" data-sector="unregulated" aria-pressed="false">Company outside prudential regulation</button>
+        </div>
+        <div class="sectorrow" role="group" aria-labelledby="sr-us"><span class="sectorrow-h" id="sr-us">United States</span>
+          <button type="button" class="btn sm sectorbtn" data-sector="us-banking" aria-pressed="false">Bank</button>
+          <button type="button" class="btn sm sectorbtn" data-sector="us-insurance" aria-pressed="false">Insurer</button>
+          <button type="button" class="btn sm sectorbtn" data-sector="us-securities" aria-pressed="false">Broker-dealer</button>
+          <button type="button" class="btn sm sectorbtn" data-sector="us-health" aria-pressed="false">Health system</button>
+          <button type="button" class="btn sm sectorbtn" data-sector="us-critical-infrastructure" aria-pressed="false">Transmission utility</button>
+        </div>
       </div>
       <div class="trylist" id="trylist" hidden>
-        <a class="btn trybtn" data-app="aiBoardDirection" data-sectors="superannuation banking insurance unregulated" href="/auth/try?app=aiBoardDirection"><strong>AI Board Direction</strong><span>The board's directions on AI: where to use it and what to rule out</span></a>
-        <a class="btn trybtn" data-app="aiRiskAppetite" data-sectors="superannuation banking insurance" href="/auth/try?app=aiRiskAppetite"><strong>AI Risk Appetite</strong><span>How much authority AI may hold, and the triggers that act on it</span></a>
-        <a class="btn trybtn" data-app="aiUseAssessment" data-sectors="superannuation banking insurance" href="/auth/try?app=aiUseAssessment"><strong>AI Use Assessment</strong><span>Whether each AI use, including in the supply chain, fits the appetite</span></a>
+        <a class="btn trybtn" data-app="aiBoardDirection" data-sectors="superannuation banking insurance unregulated us-banking us-insurance us-securities us-health us-critical-infrastructure" href="/auth/try?app=aiBoardDirection"><strong>AI Board Direction</strong><span>The board's directions on AI: where to use it and what to rule out</span></a>
+        <a class="btn trybtn" data-app="aiRiskAppetite" data-sectors="superannuation banking insurance us-banking us-insurance" href="/auth/try?app=aiRiskAppetite"><strong>AI Risk Appetite</strong><span>How much authority AI may hold, and the triggers that act on it</span></a>
+        <a class="btn trybtn" data-app="aiUseAssessment" data-sectors="superannuation banking insurance us-banking us-insurance" href="/auth/try?app=aiUseAssessment"><strong>AI Use Assessment</strong><span>Whether each AI use, including in the supply chain, fits the appetite</span></a>
         <a class="btn trybtn" data-app="aiConfidentialityExposureAssessment" data-sectors="unregulated" href="/auth/try?app=aiConfidentialityExposureAssessment"><strong>AI Confidentiality Exposure Assessment</strong><span>Where matter information can reach an external AI model</span></a>
       </div>
       <p class="notice" id="tryoff" hidden>Worked examples open from the demo site only.</p>
@@ -51,6 +60,7 @@
     <h2 id="g1">What the apps cover</h2>
     <ul class="guide-list">
       <li><strong>Australia and Singapore in full, five main sectors each.</strong> Australia: superannuation, banking, insurance, health and critical infrastructure. Singapore: banking, insurance, capital markets, listed companies and critical infrastructure. Each main sector has its own starting positions and worked examples; other sectors use a best-practice baseline or the general starting positions.</li>
+      <li><strong>The United States, five sectors.</strong> Banking, insurance, securities and investment advice, health care and critical infrastructure, each on its best-practice baseline with US starting documents and arrangements. AI Board Direction has a worked example for each; AI Risk Appetite and AI Use Assessment for the bank and the insurer. Federal and state sources are in the AI Obligations Atlas, and counsel decides what applies.</li>
       <li><strong>Best-practice baselines for any jurisdiction.</strong> Eight sector profiles drawn from international standard setters, not one country's rules: banking; insurance; securities and investment advice; health care; payments and money transmission; critical infrastructure, run by government or by a company; and government in general. A baseline names no regulator. Your own obligations come from the matter brief.</li>
       <li><strong>Public bodies.</strong> For government and government-run infrastructure, the apps name the accountable authority where they would otherwise say board, on screen and in every download.</li>
       <li><strong>Four controls in every baseline.</strong> Controls on any AI use that decides or acts (what it may touch, where its actions are logged, who checks before it acts, how it is stopped); a fast path the board sets for low-risk uses; one record of each provider's evidence, used for every regulator; and two measures that show whether governance speeds AI use or slows it.</li>
