@@ -39,7 +39,10 @@
     var t = T(), a = S.a, h = '';
     h += q('role', '1 · Who are you?', 'This sets the part you would usually play in each engagement.', t.roles.map(function (r) { return opt('role', r.id, r.name, a.role === r.id); }).join(''));
     if (!a.role) return h;
-    h += q('jurisdiction', '2 · Where is the organisation?', 'The Atlas covers Australia and Singapore in full.', t.jurisdictions.map(function (j) { return opt('jurisdiction', j.code, j.name, a.jurisdiction === j.code, j.covered ? '' : 'not covered yet'); }).join(''));
+    // The coverage line follows the Atlas's own table: the jurisdictions it covers in full, as it says.
+    var full = t.jurisdictions.filter(function (j) { return j.covered; }).map(function (j) { return j.name; });
+    var cov = full.length ? 'The Atlas covers ' + (full.length > 1 ? full.slice(0, -1).join(', ') + ' and ' + full[full.length - 1] : full[0]) + ' in full.' : '';
+    h += q('jurisdiction', '2 · Where is the organisation?', cov, t.jurisdictions.map(function (j) { return opt('jurisdiction', j.code, j.name, a.jurisdiction === j.code, j.covered ? '' : 'not covered yet'); }).join(''));
     if (!a.jurisdiction) return h;
     var secs = (t.sectors || []).filter(function (d) { return d.jurisdiction === a.jurisdiction; });
     var fin = secs.filter(function (d) { return d.financiallyRegulated; }), other = secs.filter(function (d) { return !d.financiallyRegulated; });

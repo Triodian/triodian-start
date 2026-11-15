@@ -65,6 +65,7 @@ test('each answer changes what is shown next, and the solution set follows the A
   await expect(p.locator('#q-jurisdiction')).toBeVisible();
   await expect(p.locator('#q-org')).toHaveCount(0);
   await expect(p.locator('#q-jurisdiction')).toContainText('not covered yet'); // New Zealand and the others
+  await expect(p.locator('#q-jurisdiction')).toContainText('The Atlas covers Australia and Singapore in full.');   // from the table's covered jurisdictions
   await p.locator('#q-jurisdiction').getByLabel('Australia').check();
   await expect(p.locator('#q-org')).toContainText('Superannuation');
   await p.locator('#q-org').getByLabel('Superannuation', { exact: true }).check();
