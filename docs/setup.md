@@ -62,8 +62,8 @@ A secret takes effect at once; no redeploy is needed. A client deployment of Sta
 ## 5. Check
 
 Sign up on the test site with your email, answer the questions, and check the solution set, the matter brief link and
-*Try the worked example*. `ADMINS` (a variable, comma-separated) adds Triodian administrators who can list the
-sign-ups at `/api/admin/prospects`.
+*Try the worked example*. `ADMINS` (a variable, comma-separated) names the Triodian administrators who can list the
+sign-ups at `/api/admin/prospects`; it is the only source of administrators.
 
 ## 6. More ways to sign in (optional)
 
@@ -112,8 +112,8 @@ Start sends them the way the engagement apps send their notices: through the `EM
 3. To hold invitations on a site, set `NOTIFY_SENDING` to `"off"` in its `vars` and deploy. The Requests page then
    says sending is off and sends nothing.
 
-Who can approve: the administrators in `lib/config.js` (`BOOTSTRAP_ADMINS`) and any added in the `ADMINS` variable,
-comma-separated.
+Who can approve: the administrators named in the `ADMINS` variable, comma-separated. None are compiled into the
+source; a site with `ADMINS` empty has no administrator and says so on the administrator routes.
 
 The provisioning itself runs on the administrator's own computer, from the job file, with the practice hub's
 `tools/provision-client.mjs --job`. Start holds no Cloudflare token. See the practice hub's runbook, "From a Start

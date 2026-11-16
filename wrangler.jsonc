@@ -15,14 +15,14 @@
   "d1_databases": [{ "binding": "DB", "database_name": "triodian-start-db", "database_id": "3fba18f9-2233-4bb3-b485-839ccc4fb0bf" }],
   "observability": { "enabled": true },
   // ATLAS_URL: the Atlas that serves the routing table and the solution set (task 5.3). An ATLAS service binding to the
-  // Atlas Worker may be added instead; the app uses it when present. ADMINS: more Triodian administrators, comma-separated.
+  // Atlas Worker may be added instead; the app uses it when present. ADMINS: the Triodian administrators, comma-separated; none are compiled in, and an empty value means nobody can approve.
   // SIGN_IN_METHODS: the ways to sign in set up on the site, from google, github and email, each with its
   // own Access application (docs/setup.md, "More ways to sign in"). Add one only once its Access application exists.
   // Try first (task 5.8) needs the DEMO_SESSION_KEY secret, the same value the engagement apps hold (docs/setup.md).
   // Invitations (task 5.6) are emailed through Cloudflare, as the engagement apps send their notices: the EMAIL binding,
   // from NOTIFY_FROM. Set NOTIFY_SENDING to "off" to stop sending; the requests page then says so and sends nothing.
   "send_email": [{ "name": "EMAIL" }],
-  "vars": { "SUITE_DEMO": "on", "ATLAS_URL": "https://obligations-atlas.triodian.com", "ADMINS": "", "SIGN_IN_METHODS": "google,github,email", "NOTIFY_SENDING": "on", "NOTIFY_FROM": "notifications@triodian.com" },
+  "vars": { "SUITE_DEMO": "on", "ATLAS_URL": "https://obligations-atlas.triodian.com", "ADMINS": "damian.hickey@triodian.com", "SIGN_IN_METHODS": "google,github,email", "NOTIFY_SENDING": "on", "NOTIFY_FROM": "notifications@triodian.com" },
   "env": {
     // Test copy with its own database. Deployed with `npx wrangler deploy --env test`. It reads the Atlas test site.
     "test": {
@@ -31,7 +31,7 @@
       "preview_urls": false,
       "routes": [{ "pattern": "start-test.triodian.com", "custom_domain": true }],
       "d1_databases": [{ "binding": "DB", "database_name": "triodian-start-test-db", "database_id": "a172ec69-0e0c-47e9-be26-1729a47ca11d" }],
-      "vars": { "SUITE_DEMO": "on", "APP_HOST_SUFFIX": "-test", "SITE_LABEL": "Test site", "SITE_URL": "https://start-test.triodian.com", "ATLAS_URL": "https://obligations-atlas-test.triodian.com", "ADMINS": "", "SIGN_IN_METHODS": "google,github,email", "NOTIFY_SENDING": "on", "NOTIFY_FROM": "notifications@triodian.com" },
+      "vars": { "SUITE_DEMO": "on", "APP_HOST_SUFFIX": "-test", "SITE_LABEL": "Test site", "SITE_URL": "https://start-test.triodian.com", "ATLAS_URL": "https://obligations-atlas-test.triodian.com", "ADMINS": "damian.hickey@triodian.com", "SIGN_IN_METHODS": "google,github,email", "NOTIFY_SENDING": "on", "NOTIFY_FROM": "notifications@triodian.com" },
       "send_email": [{ "name": "EMAIL" }],
       "observability": { "enabled": true }
     }
