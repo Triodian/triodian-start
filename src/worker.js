@@ -37,8 +37,20 @@ const admins = adminsOf;
 // The home page (with sign-in) and the assets are open; /start/ (the questions) needs a session.
 const OPEN_PAGES = new Set(['/', '/index.html']);
 
+/** The commit this Worker was deployed from (APP_COMMIT, set by the gated workflow's deploy step), on every response
+ *  as X-Triodian-Release and at /api/version, so a test can attest the deployed revision rather than infer it
+ *  (penetration retest 16 Nov 2026: "live authentication results alone do not establish that the fixes are deployed";
+ *  development plan P.14). The repositories are public, so the commit is not a secret. */
+export const release = env => String((env && env.APP_COMMIT) || '').trim() || 'unknown';
+const withRelease = (res, env) => { try { const r = new Response(res.body, res); r.headers.set('X-Triodian-Release', release(env)); return r; } catch (e) { return res; } };
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    if (url.pathname === '/api/version' && request.method === 'GET') return withRelease(json({ app: 'start', commit: release(env), site: env.SITE_LABEL || '' }), env);
+    return withRelease(await this.app(request, env, ctx), env);
+  },
+  async app(request, env) {
     const url = new URL(request.url);
     // Google or GitHub: Access has proven the email on that path; start the session as for email.
     const viaProvider = asEmailSignIn(request, env);
