@@ -8,7 +8,7 @@
 import { whoIs, handleAuth, gate, markDemo } from '../lib/identity/session.js';
 import { d1Store } from '../lib/store/d1.js';
 import { handle, atlasClient } from '../lib/core/api.js';
-import { ATLAS_URL, BOOTSTRAP_ADMINS } from '../lib/config.js';
+import { ATLAS_URL } from '../lib/config.js';
 import { tryFirst, tryFirstOn } from '../lib/identity/try-first.js';
 import { methodsOn, asEmailSignIn } from '../lib/identity/methods.js';
 
@@ -30,7 +30,9 @@ function atlas(env) {
   atlasFor = { env, client };
   return client;
 }
-const admins = env => BOOTSTRAP_ADMINS.concat(String(env.ADMINS || '').split(',').map(x => x.trim()).filter(Boolean));
+/** The administrators of this deployment: the ADMINS variable only, nothing compiled in (PT-01). Empty means none. */
+export const adminsOf = env => String(env.ADMINS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+const admins = adminsOf;
 
 // The home page (with sign-in) and the assets are open; /start/ (the questions) needs a session.
 const OPEN_PAGES = new Set(['/', '/index.html']);

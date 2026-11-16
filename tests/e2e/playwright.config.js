@@ -27,6 +27,7 @@ export default defineConfig({
       `--port ${PORT} --ip 127.0.0.1 --local-upstream localhost`,
       '--persist-to tests/e2e/.state',
       '--var LOCAL_DEV_NO_SIGNIN_EMAIL:ana@coastline.example',
+      '--var ADMINS:damian.hickey@triodian.com',
       `--var ATLAS_URL:http://localhost:${ATLAS}`,
       // Try first (task 5.8) on, with a test-only key, and the worked examples sent to the stand-in so no real app is reached.
       '--var SUITE_DEMO:on --var DEMO_SESSION_KEY:test-only-demo-key-0123456789abcdef',
