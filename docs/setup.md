@@ -118,3 +118,10 @@ comma-separated.
 The provisioning itself runs on the administrator's own computer, from the job file, with the practice hub's
 `tools/provision-client.mjs --job`. Start holds no Cloudflare token. See the practice hub's runbook, "From a Start
 request".
+
+A client code is held by one client: the database has a unique index on it, the approval looks the code up exactly
+(not in the newest 500 sign-ups) and assigns it in one statement, and a second approval of the same code gets 409
+(penetration test 16 Nov 2026, PT-06). The result file is accepted only if each app's address is the approved
+deployment's, `https://<app>.<code>.<parent>/`, with the same parent for every app: a parent in `APPS_PARENT_DOMAINS`
+(a variable, comma-separated; `triodian.com` when unset), or the client's own domain if the approval named it in
+`appsParentDomain` (PT-07). Any other https host is refused, so invitations can only point at the client's apps.

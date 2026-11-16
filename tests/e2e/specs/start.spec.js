@@ -361,12 +361,12 @@ test('a Triodian administrator approves a request, sets it up from the job file,
   expect(job.people.find(x => x.email === 'zed@quay.example')).toMatchObject({ admin: true });
   await cp.goto('/start/');
   await expect(cp.locator('#standing')).toContainText('Triodian is setting up your engagement');
-  const result = { format: 'triodian.provisionResult/1', requestId: job.requestId, code: 'quay', people: job.people.length, apps: job.apps.split(',').map(id => ({ id, url: `https://${id}.quay.apps.example.com` })) };
+  const result = { format: 'triodian.provisionResult/1', requestId: job.requestId, code: 'quay', people: job.people.length, apps: job.apps.split(',').map(id => ({ id, url: `https://${id}.quay.triodian.com` })) };
   await p.setInputFiles('#result', { name: 'triodian-job-quay.result.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...result, code: 'someone-else' })) });
   await expect(p.locator('#toast')).toContainText('another request');
   await p.setInputFiles('#result', { name: 'triodian-job-quay.result.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(result)) });
   await expect(p.locator('#apps a')).toHaveCount(2);
-  await expect(p.locator('#apps')).toContainText('board-direction.quay.apps.example.com');
+  await expect(p.locator('#apps')).toContainText('board-direction.quay.triodian.com');
   // 3. The invitations: one a person, held; with sending off the page says so and sends nothing.
   await expect(p.locator('#invtable tbody tr')).toHaveCount(job.people.length);
   await expect(p.locator('#invtable')).toContainText('Held');
@@ -374,12 +374,12 @@ test('a Triodian administrator approves a request, sets it up from the job file,
   await expect(p.locator('#do-send')).toBeDisabled();
   expect((await admin.request.post(`/api/admin/requests/${job.requestId}/invitations`, { data: {} })).status()).toBe(503);
   await p.click('#invites summary');
-  await expect(p.locator('#invites .invite')).toContainText('https://board-direction.quay.apps.example.com');
+  await expect(p.locator('#invites .invite')).toContainText('https://board-direction.quay.triodian.com');
   // The client now sees its apps.
   await cp.goto('/start/');
   await expect(cp.locator('#standing')).toContainText('Your engagement is set up');
   await expect(cp.locator('#myapps a')).toHaveCount(2);
-  await expect(cp.locator('#myapps a').first()).toHaveAttribute('href', 'https://board-direction.quay.apps.example.com');
+  await expect(cp.locator('#myapps a').first()).toHaveAttribute('href', 'https://board-direction.quay.triodian.com');
   expect(errs).toEqual([]);
   await client.close(); await admin.close();
 });
