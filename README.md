@@ -30,7 +30,8 @@ Both pages close with **What the apps cover** (development plan task BP.7): the 
 | --- | --- |
 | Worker entry | `src/worker.js` (Cloudflare wiring only) |
 | API, cloud-neutral | `lib/core/api.js` |
-| Prospects | `lib/store/d1.js` (Cloudflare D1) |
+| Prospects | `lib/store/d1.js`, written against the D1 API; `lib/store/sqlite.js` gives SQLite the same shape for Node and the tests |
+| On Node, without Cloudflare | `src/node.js` and `lib/platform/node.js` run the same handler on `node:http` with SQLite (`PORT`, `DATA_DIR`, `SITE_URL`, `ADMINS`, `ATLAS_URL`); `lib/platform/links.js` is the apps' link interface, the same files as the engagement apps (`tools/sync-platform.mjs`) |
 | Sign-in and sessions | `lib/identity/session.js`, `provider.js`, `cloudflare-access.js` and `oidc.js`, the same files as the engagement apps; `IDENTITY_PROVIDER` picks Access (the default) or the OpenID Connect relying party for a host not behind Access |
 | Pages | `public/index.html` (open: sign-in and Try first), `public/start/` (needs a session); `/login` sends people to the home page |
 
