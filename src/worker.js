@@ -65,7 +65,7 @@ export default {
       try { body = text ? JSON.parse(text) : undefined; } catch (e) { return json({ error: 'The request is not valid JSON.' }, 400); }
     }
     try {
-      const r = await handle({ method: request.method, path: url.pathname, email: who.email, query: Object.fromEntries(url.searchParams), body, admins: admins(env), tryFirst: tryFirstOn(env), sender: emailSender(env) }, d1Store(env.DB), atlas(env));
+      const r = await handle({ method: request.method, path: url.pathname, email: who.email, query: Object.fromEntries(url.searchParams), body, admins: admins(env), appsParentDomains: env.APPS_PARENT_DOMAINS, tryFirst: tryFirstOn(env), sender: emailSender(env) }, d1Store(env.DB), atlas(env));
       if (r.download) return new Response(JSON.stringify(r.body, null, 2) + '\n', { status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Content-Disposition': `attachment; filename="${r.download}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
       if (r.csv != null) return new Response(r.csv, { status: 200, headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="triodian-start-marketing.csv"', 'Cache-Control': 'no-store' } });
       return json(r.body, r.status);

@@ -83,7 +83,7 @@ ok('the first administrator is marked, and is in every app', person('gia@coastli
 ok('the job holds the client and the team and nothing else: no token or secret', Object.keys(job).sort().join() === 'admin,approvedAt,approvedBy,apps,code,format,jurisdiction,name,people,requestId,runBy,sector' && job.people.every(x => Object.keys(x).sort().join() === 'admin,apps,email,name,organisation') && Object.values(APP_OF).length === 4);
 
 // The result comes back
-const result = { format: RESULT_FORMAT, requestId: id, code: 'coastline', people: 15, apps: job.apps.split(',').map(a => ({ id: a, url: `https://${a}.coastline.apps.triodian.com` })) };
+const result = { format: RESULT_FORMAT, requestId: id, code: 'coastline', people: 15, apps: job.apps.split(',').map(a => ({ id: a, url: `https://${a}.coastline.triodian.com` })) };
 r = await call('POST', `/api/admin/requests/${id}/invitations`, ADMIN, {});
 ok('invitations wait for the apps to be set up', r.status === 409 && r.body.code === 'not_provisioned' && outbox.length === 0);
 r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, { ...result, code: 'other' });
@@ -92,6 +92,20 @@ r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, { ...resu
 ok('so is one with an address that is not https', r.status === 400);
 r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, { ...result, apps: result.apps.map((a, i) => i ? a : { id: a.id, url: 'javascript:alert(1)' }) });
 ok('or not a web address at all', r.status === 400);
+// PT-07 (penetration test 16 Nov 2026): the addresses must be the approved deployment's, <app>.<code>.<an allowed parent>
+const withHost = (i, url) => ({ ...result, apps: result.apps.map((a, j) => j === i ? { id: a.id, url } : a) });
+r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, withHost(0, 'https://attacker.example/'));
+ok('an unrelated https host is refused', r.status === 400 && /not where this client’s apps were approved/.test(r.body.error), JSON.stringify(r.body));
+r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, withHost(0, 'https://board-direction.coastline.triodian.com.attacker.example/'));
+ok('so is a host that merely begins with the expected name', r.status === 400);
+r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, withHost(0, 'https://board-direction.othercode.triodian.com/'));
+ok('or another client’s code', r.status === 400);
+r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, withHost(0, 'https://risk-appetite.coastline.triodian.com/'));
+ok('or the wrong app’s address for an app', r.status === 400);
+r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, withHost(0, 'https://board-direction.coastline.triodian.com:8443/'));
+ok('or a port, path or query on it', r.status === 400);
+r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, withHost(0, 'https://board-direction.coastline.acme.example.com/'));
+ok('a client’s own domain is refused unless the approval named it', r.status === 400);
 r = await call('POST', `/api/admin/requests/${id}/provisioned`, ANA, result);
 ok('a prospect cannot mark it set up', r.status === 403);
 r = await call('POST', `/api/admin/requests/${id}/provisioned`, ADMIN, result);
@@ -109,7 +123,7 @@ r = await call('POST', `/api/admin/requests/${id}/invitations`, ADMIN, {});
 ok('invitations go out, one a person; a failure is recorded, not hidden', r.status === 200 && r.body.sent === 14 && r.body.failed === 1 && outbox.length === 14 && new Set(outbox.map(m => m.to)).size === 14
   && r.body.request.invitations.find(i => i.email === 'owen@coastline.example').status === 'failed' && /mailbox full/.test(r.body.request.invitations.find(i => i.email === 'owen@coastline.example').error));
 const mail = outbox.find(m => m.to === ANA);
-ok('an invitation lists the person’s roles and the address of each app, and how to sign in', /Dear Ana/.test(mail.text) && /AI Board Direction: CRO\n  https:\/\/board-direction\.coastline\.apps\.triodian\.com/.test(mail.text) && /AI Use Assessment: CRO/.test(mail.text) && /one-time code/.test(mail.text) && /Coastline Super/.test(mail.subject) && !/administrator/.test(mail.text));
+ok('an invitation lists the person’s roles and the address of each app, and how to sign in', /Dear Ana/.test(mail.text) && /AI Board Direction: CRO\n  https:\/\/board-direction\.coastline\.triodian\.com/.test(mail.text) && /AI Use Assessment: CRO/.test(mail.text) && /one-time code/.test(mail.text) && /Coastline Super/.test(mail.subject) && !/administrator/.test(mail.text));
 ok('the first administrator is told so', /You are the administrator/.test(outbox.find(m => m.to === 'gia@coastline.example').text));
 ok('no "must" or "required" in the invitation', !outbox.some(m => /\b(must|required)\b/i.test(m.text + m.subject)));
 failFor = '';
