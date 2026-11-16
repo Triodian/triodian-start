@@ -3,7 +3,8 @@
   if (/-test\./.test(location.hostname)) document.getElementById('site').textContent = 'Test site';
   // Sign-in on the home page: a button for each way set up on this site (lib/identity/methods.js).
   var next = q.get('next') || '/start/';
-  if (next.charAt(0) !== '/' || next.indexOf('//') === 0) next = '/start/';
+  // Only a page on this site (penetration test 16 Nov 2026, PT-03): the server checks again in lib/identity/session.js.
+  try { if (next.charAt(0) !== '/' || next.indexOf('//') === 0 || /[\\\u0000-\u001f\u007f]|%(5c|2f)/i.test(next) || new URL(next, location.origin).origin !== location.origin) next = '/start/'; } catch (e) { next = '/start/'; }
   var box = document.getElementById('methods');
   var link = function (path) { return path + '?next=' + encodeURIComponent(next); };
   Array.prototype.forEach.call(box.querySelectorAll('a'), function (a) { a.href = link('/auth/' + a.getAttribute('data-method')); });
