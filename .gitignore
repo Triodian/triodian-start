@@ -3,3 +3,4 @@ node_modules/
 .dev.vars
 tests/e2e/.state/
 tests/e2e/test-results/
+.data/
