@@ -1,5 +1,7 @@
 # Triodian Start
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Triodian/triodian-start/badge)](https://scorecard.dev/viewer/?uri=github.com/Triodian/triodian-start)
+
 The front door to the Triodian AI governance apps (development plan phase 5). A person signs up with their email,
 says who they are, what kind of organisation they are in and where, and what prompted them, and sees which
 engagements fit, in the order the work is done, what each needs, and a matter brief scoped to them. They can open
